@@ -1,5 +1,4 @@
-PACKAGES=$(shell go list ./...)
-TEST=$(shell go list ./...)
+PACKAGES=$(shell go list ./ ...)
 VERSION=$(shell git describe --always --tags --dirty)
 
 define echotask
@@ -35,11 +34,11 @@ test: ## Run tests using gotestsum.
 	    --format=dots-v2 -- \
 	    -timeout=30000ms \
 	    -covermode=set \
-	    -coverprofile=.coverage.out ${TEST}
+	    -coverprofile=.coverage.out ${PACKAGES}
 
 test_ci: ## Run tests using normal test runner for ci output
 	@go test -coverpkg ./... \
-	    -coverprofile .coverage.out ${TEST} && go tool cover -func=.coverage.out
+	    -coverprofile .coverage.out ${PACKAGES} && go tool cover -func=.coverage.out
 
 lint: ## Check the code using various linters and static checkers.
 	golangci-lint run --timeout=5m ./...
@@ -67,6 +66,6 @@ formatcheck:
 	test `gofumpt -l . | wc -l` -eq 0
 
 
-.PHONY: help test test-cover lint install build
+.PHONY: help test lint install build
 
 .DEFAULT_GOAL := help
