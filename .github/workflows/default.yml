@@ -12,5 +12,7 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v3
-      - name: build application
-        run: make build
+      - name: test
+        run:
+          make deps
+          make test
