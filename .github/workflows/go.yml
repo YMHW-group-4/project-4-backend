@@ -15,7 +15,9 @@ jobs:
       with:
         go-version-file: 'go.mod'
     - name: build
-      run: go build -v ./...
+      run: |
+        make deps
+        make build_all
   test:
     runs-on: ubuntu-latest
     steps:
@@ -23,10 +25,10 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version-file: 'go.mod'
-      - name: test
-        run: 
-          make deps
-          make test
+      - name: gotestsum
+        run: |
+          make install_gotestsum
+          make test_ci
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +37,10 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.49.0
+        run: |
+          make install_lint
+          make lint
+      - name: gofumpt
+        run: |
+          make install_gofumpt
+          make formatcheck
