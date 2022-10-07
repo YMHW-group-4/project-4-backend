@@ -1,5 +1,8 @@
-PACKAGES=$(shell go list ./ ...)
 VERSION=$(shell git describe --always --tags --dirty)
+LDFLAGS=-ldflags "-s -w -X main.Version=${VERSION}"
+BUILD_PARAMS=CGO_ENABLED=0 ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH=go1.19
+TEST=$(shell go list ./... | grep -v /test/)
+ENTRYPOINT=cmd/*.go
 
 define echotask
 	@tput setaf 6
@@ -21,24 +24,63 @@ help:
 	@echo
 	$(call echoversion,"Project crytocurrency",$(VERSION))
 	@echo
+	$(call echotask,"run","run the project")
 	$(call echotask,"deps","install all dependencies")
 	$(call echotask,"format","formats code with gofumpt")
 	$(call echotask,"formatcheck","checks if code is formatted with gofumpt")
 	$(call echotask,"lint","run all linters")
 	$(call echotask,"test","run all tests")
-	$(call echotask,"test_ci","run tests for the ci job")
+	$(call echotask,"test_html","run tests showing coverage in the browser")
+	$(call echotask,"test_ci","run tests using normal test runner for ci output")
+	$(call echotask,"build","compile project for the current platform")
+	$(call echotask,"build_all","compile project for all supported platforms")
+	$(call echotask,"build_amd64","compile project for amd64")
+	$(call echotask,"build_arm64","compile project for arm64v8")
+	$(call echotask,"build_windows","compile project for arm64v8")
+	$(call echotask,"clean","clean the build folder")
 	@echo
 
-test: ## Run tests using gotestsum.
+run:
+	cd cmd && go run .
+
+test:
 	@gotestsum \
 	    --format=dots-v2 -- \
 	    -timeout=30000ms \
 	    -covermode=set \
-	    -coverprofile=.coverage.out ${PACKAGES}
+	    -coverprofile=.coverage.out ${TEST}
 
-test_ci: ## Run tests using normal test runner for ci output
+test_html:
+	@$(MAKE) test
+	@go tool cover -html=.coverage.out
+
+test_ci:
 	@go test -coverpkg ./... \
-	    -coverprofile .coverage.out ${PACKAGES} && go tool cover -func=.coverage.out
+	    -coverprofile .coverage.out ${TEST} && go tool cover -func=.coverage.out
+
+build_all: build_amd64 build_arm64v8 build_windows
+
+build: ## Create a production binary for current platform.
+	@${BUILD_PARAMS} go build ${LDFLAGS} -o \
+	    build/crypto-${VERSION}-$(shell go env GOHOSTOS)-$(shell go env GOHOSTARCH) ${ENTRYPOINT}
+
+build_amd64: ## Create Linux AMD64 binary.
+	@GOARCH=amd64 GOOS=linux ${BUILD_PARAMS} go build ${LDFLAGS} \
+		-o build/crypto-${VERSION}-linux-amd64 ${ENTRYPOINT}
+	@touch build/crypto-linux-amd64
+	@ln -sf crypto-${VERSION}-linux-amd64 build/crypto-linux-amd64
+
+build_arm64v8: ## Create default linux arm (armv7) binary.
+	@GOARCH=arm GOOS=linux ${BUILD_PARAMS} go build ${LDFLAGS} \
+		-o build/crypto-${VERSION}-linux-arm64v8 ${ENTRYPOINT}
+	@touch build/crypto-linux-arm64v8
+	@ln -sf crypto-${VERSION}-linux-arm64v8 build/crypto-linux-arm64v8
+
+build_windows: ## Create Windows binaries.
+	@GOARCH=386 GOOS=windows ${BUILD_PARAMS} go build ${LDFLAGS} -o \
+	    build/crypto-${VERSION}-windows-836.exe ${ENTRYPOINT}
+	@GOARCH=amd64 GOOS=windows ${BUILD_PARAMS} go build ${LDFLAGS} -o \
+	    build/crypto-${VERSION}-windows-amd64.exe ${ENTRYPOINT}
 
 lint: ## Check the code using various linters and static checkers.
 	golangci-lint run --timeout=5m ./...
@@ -65,7 +107,9 @@ format:
 formatcheck:
 	test `gofumpt -l . | wc -l` -eq 0
 
+clean:
+	rm -rf build
 
-.PHONY: help test lint install build
+.PHONY: build help test test_ci test_html lint deps build clean run
 
 .DEFAULT_GOAL := help
