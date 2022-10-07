@@ -34,8 +34,8 @@ jobs:
           go-version-file: 'go.mod'
       - name: gofumpt
         run: 
-          go install mvdan.cc/gofumpt@v0.3.1
-          test `gofumpt -l . | wc -l` -eq 0
+          make install_gofumpt
+          make formatcheck
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
