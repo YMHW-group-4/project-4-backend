@@ -1,4 +1,3 @@
 package blockchain
 
-type Block struct {
-}
+type Block struct{}

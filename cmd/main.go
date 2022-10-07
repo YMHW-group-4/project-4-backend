@@ -23,7 +23,9 @@ func setupLogger() {
 
 // setLogLevel sets the global logging level of the log's writer.
 func setLogLevel(level zerolog.Level) {
-	zerolog.SetGlobalLevel(level)
+	if zerolog.GlobalLevel() != level {
+		zerolog.SetGlobalLevel(level)
+	}
 }
 
 func main() {
