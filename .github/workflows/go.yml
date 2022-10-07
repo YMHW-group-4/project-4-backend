@@ -24,7 +24,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: test
-        run: go test -v ./...
+        run: 
+          make install_gotestsum
+          make test
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -32,10 +34,6 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version-file: 'go.mod'
-      - name: gofumpt
-        run: 
-          make install_gofumpt
-          make formatcheck
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
