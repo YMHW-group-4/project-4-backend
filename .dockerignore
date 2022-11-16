@@ -1,1 +1,18 @@
+# Version control
+.git/
+.gitignore
+.github/
+
+# JetBrains
+.idea/
+
+# Project
 build/
+*.md
+*.out
+docker
+
+# Config files
+.dockerignore
+.editorconfig
+.golangci.yml

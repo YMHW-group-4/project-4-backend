@@ -1,6 +1,6 @@
 VERSION=$(shell git describe --always --tags --dirty)
 LDFLAGS=-ldflags "-s -w -X main.Version=${VERSION}"
-BUILD_PARAMS=CGO_ENABLED=0 ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH=go1.19
+BUILD_PARAMS=CGO_ENABLED=0
 TEST=$(shell go list ./... | grep -v /test/)
 ENTRYPOINT=cmd/*.go
 
@@ -36,8 +36,8 @@ help:
 	$(call echotask,"build_all","compile project for all supported platforms")
 	$(call echotask,"build_amd64","compile project for amd64")
 	$(call echotask,"build_arm64","compile project for arm64v8")
-	$(call echotask,"build_windows","compile project for arm64v8")
-	$(call echotask,"clean","clean the build folder")
+	$(call echotask,"build_windows","compile project for windows")
+	$(call echotask,"clean","clean the build directory")
 	@echo
 
 run:
@@ -70,7 +70,7 @@ build_amd64: ## Create Linux AMD64 binary.
 	@touch build/crypto-linux-amd64
 	@ln -sf crypto-${VERSION}-linux-amd64 build/crypto-linux-amd64
 
-build_arm64v8: ## Create default linux arm (armv7) binary.
+build_arm64v8: ## Create default linux arm (armv8) binary.
 	@GOARCH=arm GOOS=linux ${BUILD_PARAMS} go build ${LDFLAGS} \
 		-o build/crypto-${VERSION}-linux-arm64v8 ${ENTRYPOINT}
 	@touch build/crypto-linux-arm64v8
@@ -110,6 +110,6 @@ formatcheck:
 clean:
 	rm -rf build
 
-.PHONY: build help test test_ci test_html lint deps build clean run
+.PHONY: build help test test_ci test_html lint deps clean run
 
 .DEFAULT_GOAL := help
