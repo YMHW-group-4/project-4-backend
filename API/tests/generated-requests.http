@@ -1,0 +1,9 @@
+### Api host endpoind
+GET {{host}}{{port}}/
+Accept: application/json
+
+### Test wallet endpoint
+POST {{host}}{{port}}/wallets
+Content-Type: application/x-www-form-urlencoded
+
+user_id=1

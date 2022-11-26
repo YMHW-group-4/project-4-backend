@@ -1,0 +1,74 @@
+package endpoints
+
+import (
+	"backend/database"
+	"backend/util"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"golang.org/x/crypto/ripemd160"
+	"net/http"
+)
+
+const (
+	checksumLength = 4
+	version        = byte(0x00)
+)
+
+type Wallet struct {
+	PrivateKey ecdsa.PrivateKey
+	PublicKey  []byte
+}
+
+func (w *Wallet) Address() []byte {
+	pubHash := PublicKeyHash(w.PublicKey)
+	versionedHash := append([]byte{version}, pubHash...)
+	checksum := Checksum(versionedHash)
+	finalHash := append(versionedHash, checksum...)
+	return util.Base58Encode(finalHash)
+}
+
+func Wallets(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		createWallet()
+	}
+}
+
+func createWallet() {
+	wallet := MakeWallet()
+	address := wallet.Address()
+
+	body := make(map[string]any)
+	body["address"] = address
+	body["public"] = wallet.PublicKey
+	body["private"] = wallet.PrivateKey
+
+	database.POST("/rest/v1/wallets", nil)
+}
+
+func MakeWallet() *Wallet {
+	privateKey, publicKey := NewKeyPair()
+	return &Wallet{privateKey, publicKey}
+}
+
+func NewKeyPair() (ecdsa.PrivateKey, []byte) {
+	curve := elliptic.P256()
+	private, _ := ecdsa.GenerateKey(curve, rand.Reader)
+	pub := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
+	return *private, pub
+}
+
+func Checksum(ripeMdHash []byte) []byte {
+	firstHash := sha256.Sum256(ripeMdHash)
+	secondHash := sha256.Sum256(firstHash[:])
+	return secondHash[:checksumLength]
+}
+
+func PublicKeyHash(publicKey []byte) []byte {
+	hashedPublicKey := sha256.Sum256(publicKey)
+	hasher := ripemd160.New()
+	_, _ = hasher.Write(hashedPublicKey[:])
+	publicRipeMd := hasher.Sum(nil)
+	return publicRipeMd
+}
