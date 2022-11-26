@@ -1,11 +1,11 @@
 package main
 
 import (
+	"backend/API"
 	"fmt"
-	"os"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"os"
 )
 
 // setupLogger checks whether the Stdout is a terminal or not.
@@ -29,6 +29,7 @@ func setLogLevel(level zerolog.Level) {
 }
 
 func main() {
+	API.StartServer()
 	setupLogger()
 	setLogLevel(zerolog.DebugLevel)
 
