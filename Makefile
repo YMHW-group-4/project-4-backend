@@ -80,7 +80,7 @@ build_arm64v8: # Create default linux arm (armv8) binary.
 
 build_windows: # Create Windows binaries.
 	@GOARCH=386 GOOS=windows ${BUILD_PARAMS} go build ${LDFLAGS} -o \
-	    build/crypto-${VERSION}-windows-836.exe ${ENTRYPOINT}
+	    build/crypto-${VERSION}-windows-386.exe ${ENTRYPOINT}
 	@GOARCH=amd64 GOOS=windows ${BUILD_PARAMS} go build ${LDFLAGS} -o \
 	    build/crypto-${VERSION}-windows-amd64.exe ${ENTRYPOINT}
 
