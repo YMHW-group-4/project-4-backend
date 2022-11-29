@@ -35,8 +35,10 @@ help:
 	$(call echotask,"build","compile project for the current platform")
 	$(call echotask,"build_all","compile project for all supported platforms")
 	$(call echotask,"build_amd64","compile project for amd64")
-	$(call echotask,"build_arm64","compile project for arm64v8")
+	$(call echotask,"build_arm64v8","compile project for arm64v8")
 	$(call echotask,"build_windows","compile project for windows")
+	$(call echotask,"docker_amd64","create amd64 container")
+	$(call echotask,"docker_arm64v8","create arm64v8 container")
 	$(call echotask,"clean","clean the build directory")
 	@echo
 
@@ -60,33 +62,39 @@ test_ci:
 
 build_all: build_amd64 build_arm64v8 build_windows
 
-build: ## Create a production binary for current platform.
+build: # Create a production binary for current platform.
 	@${BUILD_PARAMS} go build ${LDFLAGS} -o \
 	    build/crypto-${VERSION}-$(shell go env GOHOSTOS)-$(shell go env GOHOSTARCH) ${ENTRYPOINT}
 
-build_amd64: ## Create Linux AMD64 binary.
+build_amd64: # Create Linux AMD64 binary.
 	@GOARCH=amd64 GOOS=linux ${BUILD_PARAMS} go build ${LDFLAGS} \
 		-o build/crypto-${VERSION}-linux-amd64 ${ENTRYPOINT}
 	@touch build/crypto-linux-amd64
 	@ln -sf crypto-${VERSION}-linux-amd64 build/crypto-linux-amd64
 
-build_arm64v8: ## Create default linux arm (armv8) binary.
+build_arm64v8: # Create default linux arm (armv8) binary.
 	@GOARCH=arm GOOS=linux ${BUILD_PARAMS} go build ${LDFLAGS} \
 		-o build/crypto-${VERSION}-linux-arm64v8 ${ENTRYPOINT}
 	@touch build/crypto-linux-arm64v8
 	@ln -sf crypto-${VERSION}-linux-arm64v8 build/crypto-linux-arm64v8
 
-build_windows: ## Create Windows binaries.
+build_windows: # Create Windows binaries.
 	@GOARCH=386 GOOS=windows ${BUILD_PARAMS} go build ${LDFLAGS} -o \
 	    build/crypto-${VERSION}-windows-836.exe ${ENTRYPOINT}
 	@GOARCH=amd64 GOOS=windows ${BUILD_PARAMS} go build ${LDFLAGS} -o \
 	    build/crypto-${VERSION}-windows-amd64.exe ${ENTRYPOINT}
 
-lint: ## Check the code using various linters and static checkers.
+docker_amd64: # Build amd64 docker container
+	docker build . -f ./docker/amd64/Dockerfile -t crypto-amd64
+
+docker_arm64v8: # Build arm64v8 docker container
+	docker build . -f ./docker/arm64v8/Dockerfile -t crypto-arm64v8
+
+lint: # Check the code using various linters and static checkers.
 	golangci-lint run --timeout=5m ./...
 
-deps: ## Install all dependencies for this project
-	go mod download
+deps: # Install all dependencies for this project
+	go mod download && go mod verify
 	@make install_lint
 	@make install_gofumpt
 	@make install_gotestsum

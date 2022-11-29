@@ -1,12 +1,14 @@
-
-
+# syntax=docker/dockerfile:1
+FROM golang:1.19 AS builder
 
 WORKDIR /crypto
 COPY . .
+
+RUN go mod download && go mod verify
 RUN make build_arm64v8
 
 FROM arm64v8/alpine:3.14
 
-
-ENV ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH=go1.19
-CMD ["/crypto"]
+WORKDIR /node
+COPY --from=builder /crypto/build/crypto-linux-arm64v8 ./crypto
+ENTRYPOINT ["./crypto"]
