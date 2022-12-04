@@ -1,3 +1,7 @@
 package blockchain
 
-type Block struct{}
+type Block struct {
+	Transactions []Transaction
+	Hash         string
+	Timestamp    int
+}
