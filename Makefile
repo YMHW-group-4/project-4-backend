@@ -37,6 +37,7 @@ help:
 	$(call echotask,"build_amd64","compile project for amd64")
 	$(call echotask,"build_arm64v8","compile project for arm64v8")
 	$(call echotask,"build_windows","compile project for windows")
+	$(call echotask,"docker_build","build all docker containers")
 	$(call echotask,"docker_amd64","create amd64 container")
 	$(call echotask,"docker_arm64v8","create arm64v8 container")
 	$(call echotask,"clean","clean the build directory")
