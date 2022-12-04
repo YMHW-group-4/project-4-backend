@@ -2,7 +2,7 @@ VERSION=$(shell git describe --always --tags --dirty)
 LDFLAGS=-ldflags "-s -w -X main.version=${VERSION}"
 BUILD_PARAMS=CGO_ENABLED=0
 TEST=$(shell go list ./... | grep -v /test/)
-ENTRYPOINT=cmd
+ENTRYPOINT=cmd/*
 
 define echotask
 	@tput setaf 6
