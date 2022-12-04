@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
 FROM golang:1.19 AS builder
-
 WORKDIR /crypto
 COPY . .
 RUN go mod download && go mod verify

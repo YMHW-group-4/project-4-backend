@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-// setupLogger checks whether the Stdout is a terminal or not.
+// setupLogger checks whether the Stdout is a terminal or not
 // if so it sets the global log's writer to a ConsoleWriter.
 func setupLogger() {
 	if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) != 0 {
@@ -21,20 +21,39 @@ func setupLogger() {
 	log.Logger = log.Output(os.Stderr)
 }
 
-// setLogLevel sets the global logging level of the log's writer.
-func setLogLevel(level zerolog.Level) {
-	if zerolog.GlobalLevel() != level {
-		zerolog.SetGlobalLevel(level)
+// setLogLevel sets the global log level to either debug or info level.
+func setLogLevel(debug bool) {
+	if debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 }
 
 func main() {
+	startup := time.Now()
+	config := getConfigFromEnv()
+	setLogLevel(config.debug)
 	setupLogger()
-	setLogLevel(zerolog.DebugLevel)
 
-	log.Info().Msgf("%s", greet("John"))
-}
+	log.Info().
+		Str("version", version).
+		Int("port", config.port).
+		Bool("debug", config.debug).
+		Msg("node: startup")
 
-func greet(s string) string {
-	return fmt.Sprintf("Hello %s!", s)
+	node, err := newNode(config)
+	if err != nil {
+		log.Fatal().Err(err).Msg("node: failed to create node")
+	}
+
+	node.run()
+
+	node.uptime = time.Now()
+
+	log.Info().
+		TimeDiff("startup", node.uptime, startup).
+		Msg("node: running")
+
+	node.handleSigterm()
 }

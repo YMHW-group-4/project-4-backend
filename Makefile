@@ -1,8 +1,8 @@
 VERSION=$(shell git describe --always --tags --dirty)
-LDFLAGS=-ldflags "-s -w -X main.Version=${VERSION}"
+LDFLAGS=-ldflags "-s -w -X main.version=${VERSION}"
 BUILD_PARAMS=CGO_ENABLED=0
 TEST=$(shell go list ./... | grep -v /test/)
-ENTRYPOINT=cmd/*.go
+ENTRYPOINT=cmd/*
 
 define echotask
 	@tput setaf 6
@@ -37,6 +37,7 @@ help:
 	$(call echotask,"build_amd64","compile project for amd64")
 	$(call echotask,"build_arm64v8","compile project for arm64v8")
 	$(call echotask,"build_windows","compile project for windows")
+	$(call echotask,"docker_build","build all docker containers")
 	$(call echotask,"docker_amd64","create amd64 container")
 	$(call echotask,"docker_arm64v8","create arm64v8 container")
 	$(call echotask,"clean","clean the build directory")
@@ -84,11 +85,13 @@ build_windows: # Create Windows binaries.
 	@GOARCH=amd64 GOOS=windows ${BUILD_PARAMS} go build ${LDFLAGS} -o \
 	    build/crypto-${VERSION}-windows-amd64.exe ${ENTRYPOINT}
 
+docker_build: docker_amd64 docker_arm64v8
+
 docker_amd64: # Build amd64 docker container
-	docker build . -f ./docker/amd64/Dockerfile -t crypto-amd64
+	docker build . -f ./docker/amd64/Dockerfile -t blockchain-node-amd64:${VERSION}
 
 docker_arm64v8: # Build arm64v8 docker container
-	docker build . -f ./docker/arm64v8/Dockerfile -t crypto-arm64v8
+	docker build . -f ./docker/arm64v8/Dockerfile -t blockchain-node-arm64v8:${VERSION}
 
 lint: # Check the code using various linters and static checkers.
 	golangci-lint run --timeout=5m ./...
@@ -118,6 +121,6 @@ formatcheck:
 clean:
 	rm -rf build
 
-.PHONY: build help test test_ci test_html lint deps clean run
+.PHONY: build help test lint deps format clean run
 
 .DEFAULT_GOAL := help
