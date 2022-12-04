@@ -1,0 +1,15 @@
+name: build and test
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - master
+
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  golang-ci:
+    uses: ./.github/workflows/golang-ci.yml
