@@ -2,9 +2,6 @@
 .gitignore
 .github/
 
-# JetBrains
-.idea/
-
 # Project
 build/
 *.md
