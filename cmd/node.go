@@ -21,7 +21,9 @@ type node struct {
 }
 
 // newNode creates a new node with given configuration.
-func newNode(config configuration) (*node, error) {
+func newNode(config configuration) (*node, error) { //nolint
+	log.Info().Msgf("%v", config)
+
 	return &node{
 		network:    nil,
 		blockchain: nil,
