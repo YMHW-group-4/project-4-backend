@@ -3,11 +3,9 @@ package endpoints
 import "net/http"
 
 func Transactions(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method == "POST" {
 		createTransaction()
 	}
-
 }
 
 func createTransaction() {
