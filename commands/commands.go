@@ -33,3 +33,7 @@ func AddBlock(){
 func CheckBlock(){
 
 }
+
+func ShowAllBlocks() {
+	blockchain.ReadBlocks()
+}
