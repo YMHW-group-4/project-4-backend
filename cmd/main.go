@@ -1,11 +1,10 @@
 package main
 
 import (
-	"os"
-	"time"
-
+	"backend/cli"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"os"
 )
 
 // setupLogger checks whether the Stdout is a terminal or not
@@ -30,30 +29,32 @@ func setLogLevel(debug bool) {
 	}
 }
 
+
 func main() {
-	startup := time.Now()
-	config := getConfigFromEnv()
-	setLogLevel(config.debug)
-	setupLogger()
+	//startup := time.Now()
+	//config := getConfigFromEnv()
+	//setLogLevel(config.debug)
+	//setupLogger()
+	//
+	//log.Info().
+	//	Str("version", version).
+	//	Int("port", config.port).
+	//	Bool("debug", config.debug).
+	//	Msg("node: startup")
+	//
+	//node, err := newNode(config)
+	//if err != nil {
+	//	log.Fatal().Err(err).Msg("node: failed to create node")
+	//}
+	//
+	//node.run()
+	//
+	//node.uptime = time.Now()
+	//
+	//log.Info().
+	//	TimeDiff("startup", node.uptime, startup).
+	//	Msg("node: running")
 
-	log.Info().
-		Str("version", version).
-		Int("port", config.port).
-		Bool("debug", config.debug).
-		Msg("node: startup")
-
-	node, err := newNode(config)
-	if err != nil {
-		log.Fatal().Err(err).Msg("node: failed to create node")
-	}
-
-	node.run()
-
-	node.uptime = time.Now()
-
-	log.Info().
-		TimeDiff("startup", node.uptime, startup).
-		Msg("node: running")
-
-	node.handleSigterm()
+	cli.Execute()
+	//node.handleSigterm()
 }
