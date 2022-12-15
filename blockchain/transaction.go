@@ -10,7 +10,7 @@ type Transaction struct {
 	Timestamp      time.Time
 }
 
-func createTransaction(sender string, receiver string, amount float32, id string) Transaction {
+func CreateTransaction(sender string, receiver string, amount float32, id string) Transaction {
 	return Transaction{
 		PubKeySender:   sender,
 		PubKeyReceiver: receiver,

@@ -3,7 +3,6 @@ package blockchain
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
@@ -24,26 +23,44 @@ func CreateBlockchain(transactions []Transaction) Blockchain {
 	blockchain := Blockchain{
 		Blocks: blocks,
 	}
-	file, _ := json.MarshalIndent(blockchain, "", " ")
-	_ = ioutil.WriteFile("../data/blockchain.json", file, 0o644)
+	writeToFile(blockchain)
 	return blockchain
 }
 
 func ReadBlocks() {
-	dat, err := os.ReadFile("../data/blockchain.json")
-	check(err)
-	var res map[string]interface{}
-	json.Unmarshal(dat, &res)
-	blocks, _ := json.MarshalIndent(res["Blocks"], "", " ")
+	dat := getBlockchainFromFile()
+	blocks, _ := json.MarshalIndent(dat.Blocks, "", " ")
 	fmt.Printf("The blockchain contains the following blocks: %s\n\n", string(blocks))
 }
 
-func addBlock(transactions []Transaction) {
+func AddBlocks(block Block) {
+	dat := getBlockchainFromFile()
+	dat.Blocks = append(dat.Blocks, block)
+	writeToFile(dat)
 }
 
-func readBlockChain() {
+func AddTransAction(transaction Transaction) {
+	dat := getBlockchainFromFile()
+	latestBlock := len(dat.Blocks) - 1
+	dat.Blocks[latestBlock].Transactions = append(dat.Blocks[latestBlock].Transactions, transaction)
+	writeToFile(dat)
 }
 
-func (blockchain *Blockchain) AddBlock(block Block) {
-	blockchain.Blocks = append(blockchain.Blocks, block)
+func ReadBlockChain() {
+	dat := getBlockchainFromFile()
+	blockchain, _ := json.MarshalIndent(dat, "", " ")
+	fmt.Printf("The blockchain on file: %s\n", string(blockchain))
+}
+
+func writeToFile(blockchain Blockchain) {
+	file, _ := json.MarshalIndent(blockchain, "", " ")
+	_ = os.WriteFile("../data/blockchain.json", file, 0o644)
+}
+
+func getBlockchainFromFile() Blockchain {
+	dat, err := os.ReadFile("../data/blockchain.json")
+	check(err)
+	var blockchain Blockchain
+	json.Unmarshal(dat, &blockchain)
+	return blockchain
 }

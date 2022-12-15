@@ -19,7 +19,8 @@ func CreateBlockchain() blockchain.Blockchain {
 	return blockchain.CreateBlockchain(transactions)
 }
 
-func NewTransaction() {
+func NewTransaction(transaction blockchain.Transaction) {
+	blockchain.AddTransAction(transaction)
 }
 
 func ShowTransaction() {
@@ -29,6 +30,10 @@ func AddBlock() {
 }
 
 func CheckBlock() {
+}
+
+func ReadBlockchain() {
+	blockchain.ReadBlockChain()
 }
 
 func ShowAllBlocks() {
