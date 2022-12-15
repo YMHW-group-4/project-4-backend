@@ -1,0 +1,7 @@
+version: "3.9"
+name: blockchain
+services:
+  node-amd64:
+    build:
+      dockerfile: ./docker/amd64/Dockerfile
+      context: .

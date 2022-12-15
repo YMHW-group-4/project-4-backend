@@ -6,6 +6,8 @@ import (
 	"syscall"
 	"time"
 
+	"backend/networking"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -15,17 +17,20 @@ var version string
 // node represents a singular blockchain node.
 type node struct {
 	uptime     time.Time
-	network    any
+	network    *networking.Network
 	blockchain any
 	api        any
 }
 
 // newNode creates a new node with given configuration.
 func newNode(config configuration) (*node, error) { //nolint
-	log.Info().Msgf("%v", config)
+	network, err := networking.NewNetwork(config.port)
+	if err != nil {
+		return nil, err
+	}
 
 	return &node{
-		network:    nil,
+		network:    network,
 		blockchain: nil,
 		api:        nil,
 	}, nil
@@ -33,6 +38,10 @@ func newNode(config configuration) (*node, error) { //nolint
 
 // run starts all services required by the node.
 func (node *node) run() {
+	if err := node.network.Start(); err != nil {
+		log.Fatal().Err(err).Msg("node: failed to run")
+	}
+
 	node.uptime = time.Now()
 }
 

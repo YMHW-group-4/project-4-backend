@@ -50,10 +50,8 @@ func main() {
 
 	node.run()
 
-	node.uptime = time.Now()
-
 	log.Info().
-		TimeDiff("startup", node.uptime, startup).
+		TimeDiff("startup", time.Now(), startup).
 		Msg("node: running")
 
 	cli.Execute()
