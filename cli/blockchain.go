@@ -14,19 +14,9 @@ var createBlockchainCmd = &cobra.Command{
 	Short: "Creates a first blockchain",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.CreateBlockchain()
 		res := commands.CreateBlockchain()
 		resJson, _ := json.MarshalIndent(res, "", "   ")
 		fmt.Println(string(resJson))
-	},
-}
-
-var readBlocksCmd = &cobra.Command{
-	Use:   "readblocks",
-	Short: "Shows all the blocks in the blockchain",
-	Args:  cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		commands.ShowAllBlocks()
 	},
 }
 
@@ -36,6 +26,24 @@ var readBlockchainCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		commands.ReadBlockchain()
+	},
+}
+
+var addBlock = &cobra.Command{
+	Use:   "addblock",
+	Short: "Adds block to the blockchain",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		commands.AddBlock(args[0])
+	},
+}
+
+var readBlocksCmd = &cobra.Command{
+	Use:   "readblocks",
+	Short: "Shows all the blocks in the blockchain",
+	Args:  cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
+		commands.ShowAllBlocks()
 	},
 }
 
@@ -58,9 +66,20 @@ var addTransactionToBlock = &cobra.Command{
 	},
 }
 
+var readTransactions = &cobra.Command{
+	Use:   "readtransactions",
+	Short: "Shows all the transactions in the latest block",
+	Args:  cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
+		commands.ReadTransactions()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(createBlockchainCmd)
 	rootCmd.AddCommand(readBlocksCmd)
 	rootCmd.AddCommand(readBlockchainCmd)
 	rootCmd.AddCommand(addTransactionToBlock)
+	rootCmd.AddCommand(addBlock)
+	rootCmd.AddCommand(readTransactions)
 }

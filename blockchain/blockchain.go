@@ -10,12 +10,15 @@ type Blockchain struct {
 	Blocks []Block
 }
 
+// check is a standard error checking method.
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
+// CreateBlockchain creates a blockchain and writes to JSON file.
+// The blockchain contains a Genesis block with genesis hash and dummy transaction.
 func CreateBlockchain(transactions []Transaction) Blockchain {
 	GenesisBlock := CreateGenesisBlock(transactions)
 	var blocks []Block
@@ -27,18 +30,30 @@ func CreateBlockchain(transactions []Transaction) Blockchain {
 	return blockchain
 }
 
-func ReadBlocks() {
+// ReadBlockChain gets the whole blockchain from JSON file and prints it whole.
+func ReadBlockChain() {
 	dat := getBlockchainFromFile()
-	blocks, _ := json.MarshalIndent(dat.Blocks, "", " ")
-	fmt.Printf("The blockchain contains the following blocks: %s\n\n", string(blocks))
+	blockchain, _ := json.MarshalIndent(dat, "", " ")
+	fmt.Printf("The blockchain on file: %s\n", string(blockchain))
 }
 
+// AddBlocks Adds block to the blockchain.
+// Block is first made and then given as parameter. Also writes to JSON blockchain file.
 func AddBlocks(block Block) {
 	dat := getBlockchainFromFile()
 	dat.Blocks = append(dat.Blocks, block)
 	writeToFile(dat)
 }
 
+// ReadBlocks shows all the blocks on the blockchain, with all the transactions in them.
+func ReadBlocks() {
+	dat := getBlockchainFromFile()
+	blocks, _ := json.MarshalIndent(dat.Blocks, "", " ")
+	fmt.Printf("The blockchain contains the following blocks: %s\n\n", string(blocks))
+}
+
+// AddTransAction adds a transaction to the blockchain.
+// A transaction has to be made first and then given in the method as parameter. Also writes to JSON blockchain file.
 func AddTransAction(transaction Transaction) {
 	dat := getBlockchainFromFile()
 	latestBlock := len(dat.Blocks) - 1
@@ -46,17 +61,22 @@ func AddTransAction(transaction Transaction) {
 	writeToFile(dat)
 }
 
-func ReadBlockChain() {
+// ReadTransactions gets and shows all the transactions present on the latest block.
+func ReadTransactions() []Transaction {
 	dat := getBlockchainFromFile()
-	blockchain, _ := json.MarshalIndent(dat, "", " ")
-	fmt.Printf("The blockchain on file: %s\n", string(blockchain))
+	latestBlock := len(dat.Blocks) - 1
+	return dat.Blocks[latestBlock].Transactions
 }
 
+// writeToFile writes the blockchain to the JSON blockchain file.
+// This method is called upon everytime a block or transaction is added to the blockchain.
 func writeToFile(blockchain Blockchain) {
 	file, _ := json.MarshalIndent(blockchain, "", " ")
 	_ = os.WriteFile("../data/blockchain.json", file, 0o644)
 }
 
+// getBlockchainFromFile gets the whole blockchain from the JSON blockchain file.
+// This method is called upon everytime something is read from the blockchain.
 func getBlockchainFromFile() Blockchain {
 	dat, err := os.ReadFile("../data/blockchain.json")
 	check(err)

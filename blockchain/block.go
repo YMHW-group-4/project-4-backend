@@ -6,16 +6,16 @@ import (
 )
 
 type Block struct {
-	Transactions []Transaction
 	Hash         []byte
 	Timestamp    time.Time
+	Transactions []Transaction
 }
 
 func CreateGenesisBlock(transactions []Transaction) Block {
 	b := Block{
-		Transactions: transactions,
 		Hash:         createGenesisHash(),
 		Timestamp:    time.Now(),
+		Transactions: transactions,
 	}
 	return b
 }
@@ -28,19 +28,19 @@ func createGenesisHash() []byte {
 	return hash
 }
 
-func createHash() []byte {
-	s := "secondhash"
+func createHash(key string) []byte {
+	s := key
 	h := sha256.New()
 	h.Write([]byte(s))
 	hash := h.Sum(nil)
 	return hash
 }
 
-func CreateBlock() Block {
+func CreateBlock(key string) Block {
 	b := Block{
-		Transactions: []Transaction{},
-		Hash:         createHash(),
+		Hash:         createHash(key),
 		Timestamp:    time.Now(),
+		Transactions: []Transaction{},
 	}
 	return b
 }
