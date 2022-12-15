@@ -1,17 +1,18 @@
 package commands
 
 import (
-	"backend/blockchain"
 	"time"
+
+	"backend/blockchain"
 )
 
-func CreateBlockchain() blockchain.Blockchain{
+func CreateBlockchain() blockchain.Blockchain {
 	transaction := blockchain.Transaction{
-		PubKeySender: "First Sender",
+		PubKeySender:   "First Sender",
 		PubKeyReceiver: "First Receiver",
-		Amount: 00.00,
-		Id: "First ID",
-		Timestamp: time.Now(),
+		Amount:         00.00,
+		Id:             "First ID",
+		Timestamp:      time.Now(),
 	}
 	var transactions []blockchain.Transaction
 	transactions = append(transactions, transaction)
@@ -19,19 +20,15 @@ func CreateBlockchain() blockchain.Blockchain{
 }
 
 func NewTransaction() {
-
 }
 
-func ShowTransaction(){
-
+func ShowTransaction() {
 }
 
-func AddBlock(){
-
+func AddBlock() {
 }
 
-func CheckBlock(){
-
+func CheckBlock() {
 }
 
 func ShowAllBlocks() {

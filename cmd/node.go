@@ -52,7 +52,7 @@ func (node *node) handleSigterm() {
 
 	<-sigc
 
-	log.Warn().Msg("node: shutting down")
+	log.Info().Msg("node: shutting down")
 
-	log.Fatal().Msg("node: terminated")
+	log.Info().Msg("node: terminated")
 }

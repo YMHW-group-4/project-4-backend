@@ -1,8 +1,8 @@
 package blockchain
 
 import (
-	"time"
 	"crypto/sha256"
+	"time"
 )
 
 type Block struct {
@@ -14,8 +14,8 @@ type Block struct {
 func CreateGenesisBlock(transactions []Transaction) Block {
 	h := Block{
 		Transactions: transactions,
-		Hash: createGenesisHash(),
-		Timestamp: time.Now(),
+		Hash:         createGenesisHash(),
+		Timestamp:    time.Now(),
 	}
 	return h
 }

@@ -1,4 +1,3 @@
 package blockchain
 
-type Mempool struct {
-}
+type Mempool struct{}

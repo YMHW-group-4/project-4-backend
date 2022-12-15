@@ -1,4 +1,3 @@
 package blockchain
 
-type Accountmodel struct {
-}
+type Accountmodel struct{}

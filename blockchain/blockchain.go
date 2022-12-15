@@ -17,15 +17,15 @@ func check(e error) {
 	}
 }
 
-func CreateBlockchain(transactions []Transaction) Blockchain{
+func CreateBlockchain(transactions []Transaction) Blockchain {
 	GenesisBlock := CreateGenesisBlock(transactions)
 	var blocks []Block
 	blocks = append(blocks, GenesisBlock)
 	blockchain := Blockchain{
 		Blocks: blocks,
 	}
-	file,_  :=json.MarshalIndent(blockchain, "", " ")
-	_ = ioutil.WriteFile("../data/blockchain.json", file, 0644)
+	file, _ := json.MarshalIndent(blockchain, "", " ")
+	_ = ioutil.WriteFile("../data/blockchain.json", file, 0o644)
 	return blockchain
 }
 
@@ -33,17 +33,15 @@ func ReadBlocks() {
 	dat, err := os.ReadFile("../data/blockchain.json")
 	check(err)
 	var res map[string]interface{}
-	json.Unmarshal([]byte(dat), &res)
-	blocks,_ := json.MarshalIndent(res["Blocks"], "", " ")
+	json.Unmarshal(dat, &res)
+	blocks, _ := json.MarshalIndent(res["Blocks"], "", " ")
 	fmt.Printf("The blockchain contains the following blocks: %s\n\n", string(blocks))
 }
 
 func addBlock(transactions []Transaction) {
-
 }
 
 func readBlockChain() {
-
 }
 
 func (blockchain *Blockchain) AddBlock(block Block) {

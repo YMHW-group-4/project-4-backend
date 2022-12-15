@@ -16,17 +16,17 @@ func TestEnvSuite(t *testing.T) {
 }
 
 func (s *EnvSuite) AfterTest(suiteName, testName string) {
-	os.Unsetenv("NODE_PORT")
+	os.Unsetenv("PORT")
 }
 
 func (s *EnvSuite) TestGetEnv() {
-	os.Setenv("NODE_PORT", "9090")
+	os.Setenv("PORT", "9090")
 
-	val := GetEnv("NODE_PORT", 9091)
+	val := GetEnv("PORT", 9091)
 	s.Equal(9090, val)
 }
 
 func (s *EnvSuite) TestGetEnvFallback() {
-	val := GetEnv("NODE_PORT", 9091)
+	val := GetEnv("PORT", 9091)
 	s.Equal(9091, val)
 }

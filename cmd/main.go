@@ -2,13 +2,14 @@ package main
 
 import (
 	"backend/cli"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-// setupLogger checks whether the Stdout is a terminal or not
+// setupLogger checks whether the Stdout is a cli or not
 // if so it sets the global log's writer to a ConsoleWriter.
 func setupLogger() {
 	if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) != 0 {
@@ -29,7 +30,6 @@ func setLogLevel(debug bool) {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 }
-
 
 func main() {
 	startup := time.Now()
