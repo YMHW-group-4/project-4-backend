@@ -6,6 +6,7 @@ import (
 	"syscall"
 	"time"
 
+	"backend/blockchain"
 	"backend/networking"
 
 	"github.com/rs/zerolog/log"
@@ -18,12 +19,12 @@ var version string
 type node struct {
 	uptime     time.Time
 	network    *networking.Network
-	blockchain any
+	blockchain *blockchain.Blockchain
 	api        any
 }
 
 // newNode creates a new node with given configuration.
-func newNode(config configuration) (*node, error) { //nolint
+func newNode(config configuration) (*node, error) {
 	network, err := networking.NewNetwork(config.port)
 	if err != nil {
 		return nil, err
@@ -52,7 +53,11 @@ func (node *node) handleSigterm() {
 
 	<-sigc
 
-	log.Warn().Msg("node: shutting down")
+	log.Info().Msg("node: shutting down")
 
-	log.Fatal().Msg("node: terminated")
+	if err := node.network.Close(); err != nil {
+		log.Error().Err(err).Msg("node: failed to close network")
+	}
+
+	log.Info().Msg("node: terminated")
 }
