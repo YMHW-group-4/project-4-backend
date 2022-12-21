@@ -4,9 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/libp2p/go-libp2p/core/peer"
-
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // source: https://medium.com/rahasak/libp2p-pubsub-peer-discovery-with-kademlia-dht-c8b131550ac7
@@ -22,7 +21,7 @@ const (
 // Subscription represents a Subscription within the Network.
 type Subscription struct {
 	Messages chan Message
-	Topic    string
+	Topic    Topic
 
 	self  peer.ID
 	ctx   context.Context
@@ -46,7 +45,7 @@ func NewSubscription(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic
 
 	s := &Subscription{
 		Messages: make(chan Message, 0),
-		Topic:    string(topic),
+		Topic:    topic,
 		self:     host,
 		ctx:      ctx,
 		top:      top,
@@ -81,7 +80,7 @@ func (subscription *Subscription) Close() error {
 
 // listen listens to incoming Messages.
 func (subscription *Subscription) listen() {
-	subscription.wg.Add(1)
+	subscription.wg.Add(2) //nolint
 
 	ch := make(chan *pubsub.Message, 0)
 
@@ -100,8 +99,6 @@ func (subscription *Subscription) listen() {
 		}
 	}()
 
-	subscription.wg.Add(1)
-
 	go func() {
 		defer subscription.wg.Done()
 
@@ -110,7 +107,7 @@ func (subscription *Subscription) listen() {
 			case <-subscription.close:
 				return
 			case msg := <-ch:
-				subscription.Messages <- NewMessage(msg.ReceivedFrom, string(msg.Data))
+				subscription.Messages <- NewMessage(msg.ReceivedFrom, subscription.Topic, string(msg.Data))
 			}
 		}
 	}()

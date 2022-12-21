@@ -4,12 +4,14 @@ import "github.com/libp2p/go-libp2p/core/peer"
 
 type Message struct {
 	Peer    peer.ID
-	Payload string `json:"payload"`
+	Topic   Topic
+	Payload string
 }
 
-func NewMessage(peer peer.ID, payload string) Message {
+func NewMessage(peer peer.ID, topic Topic, payload string) Message {
 	return Message{
 		Peer:    peer,
+		Topic:   topic,
 		Payload: payload,
 	}
 }

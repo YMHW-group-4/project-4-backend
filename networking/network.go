@@ -10,11 +10,12 @@ import (
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
-	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
+	"github.com/libp2p/go-libp2p/p2p/security/tls"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/rs/zerolog/log"
 )
@@ -70,31 +71,31 @@ func NewNetwork(port int) (*Network, error) {
 	}, nil
 }
 
-// Start starts the network.
-func (network *Network) Start() error {
-	if err := network.setupSubscriptions(); err != nil {
+// Start starts the Network.
+func (n *Network) Start() error {
+	if err := n.setupSubscriptions(); err != nil {
 		return err
 	}
 
-	if err := network.startMdns(); err != nil {
+	if err := n.startMdns(); err != nil {
 		return err
 	}
 
-	network.listen()
+	n.listen()
 
 	return nil
 }
 
 // Publish publishes a Message to given Topic.
-func (network *Network) Publish(topic Topic, message string) error {
-	m := NewMessage(network.host.ID(), message)
+func (n *Network) Publish(topic Topic, message string) error {
+	m := NewMessage(n.host.ID(), topic, message)
 
 	msg, err := json.Marshal(m)
 	if err != nil {
 		return err
 	}
 
-	if err = network.subs[topic].Publish(msg); err != nil {
+	if err = n.subs[topic].Publish(msg); err != nil {
 		return err
 	}
 
@@ -105,17 +106,24 @@ func (network *Network) Publish(topic Topic, message string) error {
 	return nil
 }
 
-func (network *Network) Reply(topic Topic, peer peer.ID) error {
-	fmt.Print(network.host.Peerstore().Peers())
-
-	stream, err := network.host.NewStream(network.ctx, peer)
+func (n *Network) Reply(peer peer.ID, topic Topic, payload string) error {
+	s, err := n.host.NewStream(n.ctx, peer, "/reply")
 	if err != nil {
 		return err
 	}
 
-	log.Debug().Msgf("%v", stream)
+	m := NewMessage(n.host.ID(), topic, payload)
 
-	if err = stream.Close(); err != nil {
+	msg, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	if _, err = s.Write(msg); err != nil {
+		return err
+	}
+
+	if err = s.Close(); err != nil {
 		return err
 	}
 
@@ -123,64 +131,65 @@ func (network *Network) Reply(topic Topic, peer peer.ID) error {
 }
 
 // Close closes the Network.
-func (network *Network) Close() error {
-	close(network.close)
+func (n *Network) Close() error {
+	close(n.close)
+	n.host.RemoveStreamHandler("/reply")
 
-	for _, sub := range network.subs {
+	for _, sub := range n.subs {
 		if err := sub.Close(); err != nil {
 			return err
 		}
 	}
 
-	if err := network.host.Close(); err != nil {
+	if err := n.host.Close(); err != nil {
 		return err
 	}
 
-	network.wg.Wait()
+	n.wg.Wait()
 
 	return nil
 }
 
 // startMdns creates and starts a new mDNS service.
 // This automatically discovers peers on the same LAN and connects to them.
-func (network *Network) startMdns() error {
-	s := mdns.NewMdnsService(network.host, discoveryServiceTag, &discoveryNotifee{host: network.host})
+func (n *Network) startMdns() error {
+	s := mdns.NewMdnsService(n.host, discoveryServiceTag, &discoveryNotifee{host: n.host})
 
 	return s.Start()
 }
 
 // setupSubscriptions starts and listens to all Subscriptions.
-func (network *Network) setupSubscriptions() error {
+func (n *Network) setupSubscriptions() error {
 	for _, top := range []Topic{Transaction, Block} {
-		sub, err := NewSubscription(network.ctx, network.ps, network.host.ID(), top)
+		sub, err := NewSubscription(n.ctx, n.ps, n.host.ID(), top)
 		if err != nil {
 			return err
 		}
 
-		network.subs[top] = sub
+		n.subs[top] = sub
 	}
 
 	return nil
 }
 
-// listen listens to incoming Messages from all Subscriptions.
-func (network *Network) listen() {
-	network.wg.Add(1)
+// listen listens to incoming Messages from all Subscriptions and replies from Nodes.
+func (n *Network) listen() {
+	n.wg.Add(1)
 
 	go func() {
-		defer network.wg.Done()
+		defer n.wg.Done()
 
 		for {
 			select {
-			case <-network.close:
+			case <-n.close:
 				return
-			case msg := <-network.subs[Transaction].Messages:
+			case msg := <-n.subs[Transaction].Messages:
 				log.Debug().
 					Str("topic", string(Transaction)).
 					Str("payload", msg.Payload).
 					Str("peer", msg.Peer.String()).
 					Msg("network: received message")
-			case msg := <-network.subs[Block].Messages:
+			case msg := <-n.subs[Block].Messages:
 				log.Debug().
 					Str("topic", string(Block)).
 					Str("payload", msg.Payload).
@@ -189,6 +198,10 @@ func (network *Network) listen() {
 			}
 		}
 	}()
+
+	n.host.SetStreamHandler("/reply", func(s network.Stream) {
+		// do something
+	})
 }
 
 // HandlePeerFound gets called when a new peer is discovered.
