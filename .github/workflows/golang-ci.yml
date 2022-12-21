@@ -13,7 +13,7 @@ jobs:
     - name: build
       run: |
         go mod download && go mod verify
-        make build_all
+        make build_amd64
   test:
     runs-on: ubuntu-latest
     steps:
