@@ -1,10 +1,16 @@
 package main
 
 import (
+	"backend/blockchain"
 	"backend/cli"
+	"bufio"
+	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // setupLogger checks whether the Stdout is a cli or not
@@ -27,6 +33,12 @@ func setLogLevel(debug bool) {
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
+}
+
+func setupBlockchain() blockchain.Blockchain {
+	var transactions []blockchain.Transaction
+	blockchain := blockchain.CreateBlockchain(transactions)
+	return blockchain
 }
 
 func main() {
@@ -52,6 +64,39 @@ func main() {
 	//	TimeDiff("startup", time.Now(), startup).
 	//	Msg("node: running")
 
+	var approvedTransactions []blockchain.Transaction
+	currentBlockchain := setupBlockchain()
+	currentBlockchain.WriteToFile()
 	cli.Execute()
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Print("Enter text: ")
+		scanner.Scan()
+		text := scanner.Text()
+
+		switch text {
+		case "addtransaction":
+			fmt.Print("Enter sender, receiver, amount and id: ")
+			scanner.Scan()
+			text = scanner.Text()
+			textArray := strings.Fields(text)
+			var amount float32
+			if s, err := strconv.ParseFloat(textArray[2], 32); err == nil {
+				amount = float32(s)
+			}
+			transaction := blockchain.Transaction{
+				PubKeySender:   textArray[0],
+				PubKeyReceiver: textArray[1],
+				Amount:         amount,
+				Id:             textArray[3],
+				Timestamp:      time.Now(),
+			}
+			approvedTransactions = append(approvedTransactions, transaction)
+			fmt.Print("Current approved transactions: \n", approvedTransactions, "\n")
+		case "addblock":
+			currentBlockchain.AddBlockToBlockchain(approvedTransactions)
+			fmt.Print("The block was added to the blockchain, and looks like this: \n", currentBlockchain.Blocks[len(currentBlockchain.Blocks)-1], "\n")
+		}
+	}
 	//node.handleSigterm()
 }

@@ -21,22 +21,10 @@ func CreateBlockchain() blockchain.Blockchain {
 	return blockchain.CreateBlockchain(transactions)
 }
 
-func NewTransaction(transaction blockchain.Transaction) {
-	blockchain.AddTransAction(transaction)
-}
-
 func ReadTransactions() {
 	transactions := blockchain.ReadTransactions()
 	transJson, _ := json.MarshalIndent(transactions, "", " ")
 	fmt.Printf("The latest block contains the following transactions:\n %s\n", transJson)
-}
-
-func AddBlock(key string) {
-	block := blockchain.CreateBlock(key)
-	blockchain.AddBlocks(block)
-}
-
-func CheckBlock() {
 }
 
 func ReadBlockchain() {

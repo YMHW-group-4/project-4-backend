@@ -26,7 +26,6 @@ func CreateBlockchain(transactions []Transaction) Blockchain {
 	blockchain := Blockchain{
 		Blocks: blocks,
 	}
-	writeToFile(blockchain)
 	return blockchain
 }
 
@@ -37,12 +36,13 @@ func ReadBlockChain() {
 	fmt.Printf("The blockchain on file: %s\n", string(blockchain))
 }
 
-// AddBlocks Adds block to the blockchain.
+// AddBlockToBlockchain Adds block to the blockchain.
 // Block is first made and then given as parameter. Also writes to JSON blockchain file.
-func AddBlocks(block Block) {
-	dat := getBlockchainFromFile()
-	dat.Blocks = append(dat.Blocks, block)
-	writeToFile(dat)
+func (blockchain *Blockchain) AddBlockToBlockchain(transactions []Transaction) {
+	block := CreateBlock("Test")
+	block.Transactions = transactions
+	blockchain.Blocks = append(blockchain.Blocks, block)
+	blockchain.WriteToFile()
 }
 
 // ReadBlocks shows all the blocks on the blockchain, with all the transactions in them.
@@ -54,12 +54,9 @@ func ReadBlocks() {
 
 // AddTransAction adds a transaction to the blockchain.
 // A transaction has to be made first and then given in the method as parameter. Also writes to JSON blockchain file.
-func AddTransAction(transaction Transaction) {
-	dat := getBlockchainFromFile()
-	latestBlock := len(dat.Blocks) - 1
-	dat.Blocks[latestBlock].Transactions = append(dat.Blocks[latestBlock].Transactions, transaction)
-	writeToFile(dat)
-}
+//func (blockchain *Blockchain) AddTransAction(transaction Transaction) {
+//	blockchain.Transactions = append(blockchain.Transactions, transaction)
+//}
 
 // ReadTransactions gets and shows all the transactions present on the latest block.
 func ReadTransactions() []Transaction {
@@ -68,9 +65,9 @@ func ReadTransactions() []Transaction {
 	return dat.Blocks[latestBlock].Transactions
 }
 
-// writeToFile writes the blockchain to the JSON blockchain file.
+// WriteToFile writes the blockchain to the JSON blockchain file.
 // This method is called upon everytime a block or transaction is added to the blockchain.
-func writeToFile(blockchain Blockchain) {
+func (blockchain *Blockchain) WriteToFile() {
 	file, _ := json.MarshalIndent(blockchain, "", " ")
 	_ = os.WriteFile("../data/blockchain.json", file, 0o644)
 }
