@@ -12,7 +12,7 @@ type configuration struct {
 // is not set then default configuration will be given instead.
 func getConfigFromEnv() configuration {
 	return configuration{
-		debug: util.GetEnv("NODE_DEBUG", false),
-		port:  util.GetEnv("NODE_PORT", 30333), //nolint
+		debug: util.GetEnv("DEBUG", false),
+		port:  util.GetEnv("PORT", 30333), //nolint
 	}
 }
