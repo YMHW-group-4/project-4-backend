@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/rs/zerolog/log"
-
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -112,11 +110,9 @@ func (subscription *Subscription) listen() {
 			case msg := <-ch:
 				var message Message
 
-				if err := json.Unmarshal(msg.Data, &message); err != nil {
-					log.Error().Err(err).Send()
+				if err := json.Unmarshal(msg.Data, &message); err == nil {
+					subscription.Messages <- message
 				}
-
-				subscription.Messages <- message
 			}
 		}
 	}()
