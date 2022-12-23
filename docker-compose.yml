@@ -2,6 +2,9 @@ version: "3.9"
 name: blockchain
 services:
   node-amd64:
-    build:
-      dockerfile: ./docker/amd64/Dockerfile
-      context: .
+    image: ymhw/blockchain-node-amd64:latest
+    environment:
+      PORT: 30333
+      DEBUG: false
+    deploy:
+      replicas: 16
