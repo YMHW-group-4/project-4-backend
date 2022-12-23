@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/libp2p/go-libp2p"
@@ -87,47 +88,44 @@ func (n *Network) Start() error {
 }
 
 // Publish publishes a Message to given Topic.
-func (n *Network) Publish(topic Topic, message string) error {
-	m := NewMessage(n.host.ID(), topic, message)
-
-	msg, err := json.Marshal(m)
+func (n *Network) Publish(topic Topic, payload string) {
+	msg, err := NewMessage(n.host.ID().String(), topic, payload)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to create message")
 	}
 
 	if err = n.subs[topic].Publish(msg); err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to publish message")
 	}
-
-	log.Debug().
-		Str("topic", string(topic)).
-		Msg("network: published message")
-
-	return nil
 }
 
-func (n *Network) Reply(peer peer.ID, topic Topic, payload string) error {
+// Reply sends a Message to one given peer.
+func (n *Network) Reply(peer peer.ID, topic Topic, payload string) {
 	s, err := n.host.NewStream(n.ctx, peer, "/reply")
 	if err != nil {
-		return err
+		log.Error().Err(err).
+			Str("peer", peer.String()).
+			Msg("network: failed to setup reply stream")
 	}
 
-	m := NewMessage(n.host.ID(), topic, payload)
-
-	msg, err := json.Marshal(m)
+	msg, err := NewMessage(n.host.ID().String(), topic, payload)
 	if err != nil {
-		return err
+		log.Error().Err(err).
+			Str("peer", peer.String()).
+			Msg("network: failed to create reply message")
 	}
 
 	if _, err = s.Write(msg); err != nil {
-		return err
+		log.Error().Err(err).
+			Str("peer", peer.String()).
+			Msg("network: failed to write reply")
 	}
 
 	if err = s.Close(); err != nil {
-		return err
+		log.Error().Err(err).
+			Str("peer", peer.String()).
+			Msg("network: failed to close reply stream")
 	}
-
-	return nil
 }
 
 // Close closes the Network.
@@ -187,20 +185,36 @@ func (n *Network) listen() {
 				log.Debug().
 					Str("topic", string(Transaction)).
 					Str("payload", msg.Payload).
-					Str("peer", msg.Peer.String()).
+					Str("peer", msg.Peer).
 					Msg("network: received message")
 			case msg := <-n.subs[Block].Messages:
 				log.Debug().
 					Str("topic", string(Block)).
 					Str("payload", msg.Payload).
-					Str("peer", msg.Peer.String()).
+					Str("peer", msg.Peer).
 					Msg("network: received message")
 			}
 		}
 	}()
 
 	n.host.SetStreamHandler("/reply", func(s network.Stream) {
-		// do something
+		var message Message
+
+		b, err := io.ReadAll(s)
+		if err != nil {
+			log.Error().Err(err).Msg("network: failed to read reply")
+		}
+
+		if err = json.Unmarshal(b, &message); err != nil {
+			log.Error().Err(err).Msg("network: failed to unmarshal reply")
+		}
+
+		switch message.Topic {
+		case Transaction:
+			// do something
+		case Block:
+			// do something
+		}
 	})
 }
 

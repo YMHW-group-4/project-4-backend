@@ -1,17 +1,20 @@
 package networking
 
-import "github.com/libp2p/go-libp2p/core/peer"
+import "encoding/json"
 
+// Message represents a message within the Network, whose
+// singular purpose is to be spread to all connected peers.
 type Message struct {
-	Peer    peer.ID
-	Topic   Topic
-	Payload string
+	Peer    string `json:"peer"`
+	Topic   Topic  `json:"topic"`
+	Payload string `json:"payload"`
 }
 
-func NewMessage(peer peer.ID, topic Topic, payload string) Message {
-	return Message{
+// NewMessage creates a JSON encoded Message.
+func NewMessage(peer string, topic Topic, payload string) ([]byte, error) {
+	return json.Marshal(Message{
 		Peer:    peer,
 		Topic:   topic,
 		Payload: payload,
-	}
+	})
 }

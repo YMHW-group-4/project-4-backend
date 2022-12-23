@@ -2,7 +2,10 @@ package networking
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -107,7 +110,13 @@ func (subscription *Subscription) listen() {
 			case <-subscription.close:
 				return
 			case msg := <-ch:
-				subscription.Messages <- NewMessage(msg.ReceivedFrom, subscription.Topic, string(msg.Data))
+				var message Message
+
+				if err := json.Unmarshal(msg.Data, &message); err != nil {
+					log.Error().Err(err).Send()
+				}
+
+				subscription.Messages <- message
 			}
 		}
 	}()
