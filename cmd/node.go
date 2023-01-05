@@ -32,7 +32,7 @@ func newNode(config configuration) (*node, error) {
 
 	return &node{
 		network:    network,
-		blockchain: nil,
+		blockchain: blockchain.NewBlockchain(),
 		api:        nil,
 	}, nil
 }
@@ -42,6 +42,8 @@ func (node *node) run() {
 	if err := node.network.Start(); err != nil {
 		log.Fatal().Err(err).Msg("node: failed to run")
 	}
+
+	node.blockchain.Setup()
 
 	node.uptime = time.Now()
 }
@@ -58,6 +60,8 @@ func (node *node) handleSigterm() {
 	if err := node.network.Close(); err != nil {
 		log.Error().Err(err).Msg("node: failed to close network")
 	}
+
+	node.blockchain.Close()
 
 	log.Info().Msg("node: terminated")
 }

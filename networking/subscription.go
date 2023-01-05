@@ -17,6 +17,7 @@ type Topic string
 const (
 	Transaction Topic = "transaction"
 	Block       Topic = "block"
+	Blockchain  Topic = "blockchain"
 )
 
 // Subscription represents a Subscription within the Network.

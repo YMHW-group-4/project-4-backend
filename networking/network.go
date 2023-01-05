@@ -31,12 +31,13 @@ type discoveryNotifee struct {
 
 // Network represents a peer-to-peer network.
 type Network struct {
-	ctx   context.Context
-	host  host.Host
-	ps    *pubsub.PubSub
-	subs  map[Topic]*Subscription
-	wg    sync.WaitGroup
-	close chan struct{}
+	Messages []Message
+	ctx      context.Context
+	host     host.Host
+	ps       *pubsub.PubSub
+	subs     map[Topic]*Subscription
+	wg       sync.WaitGroup
+	close    chan struct{}
 }
 
 // NewNetwork creates a new Network with given port.
@@ -63,12 +64,13 @@ func NewNetwork(port int) (*Network, error) {
 	}
 
 	return &Network{
-		ctx:   ctx,
-		host:  h,
-		ps:    ps,
-		subs:  make(map[Topic]*Subscription, 0),
-		wg:    sync.WaitGroup{},
-		close: make(chan struct{}, 0),
+		Messages: make([]Message, 0),
+		ctx:      ctx,
+		host:     h,
+		ps:       ps,
+		subs:     make(map[Topic]*Subscription, 0),
+		wg:       sync.WaitGroup{},
+		close:    make(chan struct{}, 0),
 	}, nil
 }
 
@@ -99,32 +101,29 @@ func (n *Network) Publish(topic Topic, payload string) {
 	}
 }
 
+// Request alias for Publish to quickly make a request on a Topic.
+func (n *Network) Request(topic Topic) {
+	n.Publish(topic, "request")
+}
+
 // Reply sends a Message to one given peer.
 func (n *Network) Reply(peer peer.ID, topic Topic, payload string) {
 	s, err := n.host.NewStream(n.ctx, peer, "/reply")
 	if err != nil {
-		log.Error().Err(err).
-			Str("peer", peer.String()).
-			Msg("network: failed to setup reply stream")
+		log.Error().Err(err).Msg("network: failed to setup reply stream")
 	}
 
 	msg, err := NewMessage(n.host.ID().String(), topic, payload)
 	if err != nil {
-		log.Error().Err(err).
-			Str("peer", peer.String()).
-			Msg("network: failed to create reply message")
+		log.Error().Err(err).Msg("network: failed to create reply message")
 	}
 
 	if _, err = s.Write(msg); err != nil {
-		log.Error().Err(err).
-			Str("peer", peer.String()).
-			Msg("network: failed to write reply")
+		log.Error().Err(err).Msg("network: failed to write reply")
 	}
 
 	if err = s.Close(); err != nil {
-		log.Error().Err(err).
-			Str("peer", peer.String()).
-			Msg("network: failed to close reply stream")
+		log.Error().Err(err).Msg("network: failed to close reply stream")
 	}
 }
 
@@ -158,7 +157,7 @@ func (n *Network) startMdns() error {
 
 // setupSubscriptions starts and listens to all Subscriptions.
 func (n *Network) setupSubscriptions() error {
-	for _, top := range []Topic{Transaction, Block} {
+	for _, top := range []Topic{Transaction, Block, Blockchain} {
 		sub, err := NewSubscription(n.ctx, n.ps, n.host.ID(), top)
 		if err != nil {
 			return err
@@ -193,6 +192,12 @@ func (n *Network) listen() {
 					Str("payload", msg.Payload).
 					Str("peer", msg.Peer).
 					Msg("network: received message")
+			case msg := <-n.subs[Blockchain].Messages:
+				log.Debug().
+					Str("topic", string(Blockchain)).
+					Str("payload", msg.Payload).
+					Str("peer", msg.Peer).
+					Msg("network: received message")
 			}
 		}
 	}()
@@ -214,6 +219,8 @@ func (n *Network) listen() {
 			// do something
 		case Block:
 			// do something
+		case Blockchain:
+			// do something
 		}
 	})
 }
@@ -222,14 +229,10 @@ func (n *Network) listen() {
 // This will automatically connect with the discovered peer.
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	if err := n.host.Connect(context.Background(), pi); err != nil {
-		log.Debug().
-			Err(err).
-			Str("peer", pi.String()).
-			Msg("network: failed to connect to peer")
+		log.Error().Err(err).Msg("network: failed to connect to peer")
 	}
 
 	log.Debug().
-		Str("peer", pi.String()).
 		Int("peer(s)", len(n.host.Network().Peers())).
 		Msg("network: discovered peer")
 }
