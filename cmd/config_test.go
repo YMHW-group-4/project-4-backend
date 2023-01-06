@@ -9,6 +9,7 @@ import (
 func TestGetConfigFromEnv(t *testing.T) {
 	config := getConfigFromEnv()
 
-	assert.Equal(t, false, config.debug)
-	assert.Equal(t, 30333, config.port)
+	assert.Equal(t, false, config.Debug)
+	assert.Equal(t, 30333, config.Port)
+	assert.Equal(t, 8080, config.ApiPort)
 }

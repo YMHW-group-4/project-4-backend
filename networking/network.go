@@ -2,16 +2,13 @@ package networking
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"sync"
 
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -33,9 +30,9 @@ type discoveryNotifee struct {
 type Network struct {
 	Messages []Message
 	ctx      context.Context
-	host     host.Host
+	Host     host.Host
 	ps       *pubsub.PubSub
-	subs     map[Topic]*Subscription
+	Subs     map[Topic]*Subscription
 	wg       sync.WaitGroup
 	close    chan struct{}
 }
@@ -66,9 +63,9 @@ func NewNetwork(port int) (*Network, error) {
 	return &Network{
 		Messages: make([]Message, 0),
 		ctx:      ctx,
-		host:     h,
+		Host:     h,
 		ps:       ps,
-		subs:     make(map[Topic]*Subscription, 0),
+		Subs:     make(map[Topic]*Subscription, 0),
 		wg:       sync.WaitGroup{},
 		close:    make(chan struct{}, 0),
 	}, nil
@@ -84,61 +81,72 @@ func (n *Network) Start() error {
 		return err
 	}
 
-	n.listen()
+	return nil
+}
+
+// ConnectedPeers returns the amount of currently connected peers.
+func (n *Network) ConnectedPeers() int {
+	return len(n.Host.Network().Peers())
+}
+
+// Publish publishes a Message to given Topic.
+func (n *Network) Publish(topic Topic, payload string) error {
+	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
+	if err != nil {
+		return err
+	}
+
+	if err = n.Subs[topic].Publish(msg); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-// Publish publishes a Message to given Topic.
-func (n *Network) Publish(topic Topic, payload string) {
-	msg, err := NewMessage(n.host.ID().String(), topic, payload)
-	if err != nil {
-		log.Error().Err(err).Msg("network: failed to create message")
-	}
-
-	if err = n.subs[topic].Publish(msg); err != nil {
-		log.Error().Err(err).Msg("network: failed to publish message")
-	}
-}
-
 // Request alias for Publish to quickly make a request on a Topic.
-func (n *Network) Request(topic Topic) {
-	n.Publish(topic, "request")
+func (n *Network) Request(topic Topic) error {
+	if err := n.Publish(topic, "request"); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Reply sends a Message to one given peer.
-func (n *Network) Reply(peer peer.ID, topic Topic, payload string) {
-	s, err := n.host.NewStream(n.ctx, peer, "/reply")
+func (n *Network) Reply(peer peer.ID, topic Topic, payload string) error {
+	s, err := n.Host.NewStream(n.ctx, peer, "/reply")
 	if err != nil {
-		log.Error().Err(err).Msg("network: failed to setup reply stream")
+		return err
 	}
 
-	msg, err := NewMessage(n.host.ID().String(), topic, payload)
+	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
 	if err != nil {
-		log.Error().Err(err).Msg("network: failed to create reply message")
+		return err
 	}
 
 	if _, err = s.Write(msg); err != nil {
-		log.Error().Err(err).Msg("network: failed to write reply")
+		return err
 	}
 
 	if err = s.Close(); err != nil {
-		log.Error().Err(err).Msg("network: failed to close reply stream")
+		return err
 	}
+
+	return nil
 }
 
 // Close closes the Network.
 func (n *Network) Close() error {
 	close(n.close)
-	n.host.RemoveStreamHandler("/reply")
+	n.Host.RemoveStreamHandler("/reply")
 
-	for _, sub := range n.subs {
+	for _, sub := range n.Subs {
 		if err := sub.Close(); err != nil {
 			return err
 		}
 	}
 
-	if err := n.host.Close(); err != nil {
+	if err := n.Host.Close(); err != nil {
 		return err
 	}
 
@@ -150,7 +158,7 @@ func (n *Network) Close() error {
 // startMdns creates and starts a new mDNS service.
 // This automatically discovers peers on the same LAN and connects to them.
 func (n *Network) startMdns() error {
-	s := mdns.NewMdnsService(n.host, discoveryServiceTag, &discoveryNotifee{host: n.host})
+	s := mdns.NewMdnsService(n.Host, discoveryServiceTag, &discoveryNotifee{host: n.Host})
 
 	return s.Start()
 }
@@ -158,71 +166,15 @@ func (n *Network) startMdns() error {
 // setupSubscriptions starts and listens to all Subscriptions.
 func (n *Network) setupSubscriptions() error {
 	for _, top := range []Topic{Transaction, Block, Blockchain} {
-		sub, err := NewSubscription(n.ctx, n.ps, n.host.ID(), top)
+		sub, err := NewSubscription(n.ctx, n.ps, n.Host.ID(), top)
 		if err != nil {
 			return err
 		}
 
-		n.subs[top] = sub
+		n.Subs[top] = sub
 	}
 
 	return nil
-}
-
-// listen listens to incoming Messages from all Subscriptions and replies from Nodes.
-func (n *Network) listen() {
-	n.wg.Add(1)
-
-	go func() {
-		defer n.wg.Done()
-
-		for {
-			select {
-			case <-n.close:
-				return
-			case msg := <-n.subs[Transaction].Messages:
-				log.Debug().
-					Str("topic", string(Transaction)).
-					Str("payload", msg.Payload).
-					Str("peer", msg.Peer).
-					Msg("network: received message")
-			case msg := <-n.subs[Block].Messages:
-				log.Debug().
-					Str("topic", string(Block)).
-					Str("payload", msg.Payload).
-					Str("peer", msg.Peer).
-					Msg("network: received message")
-			case msg := <-n.subs[Blockchain].Messages:
-				log.Debug().
-					Str("topic", string(Blockchain)).
-					Str("payload", msg.Payload).
-					Str("peer", msg.Peer).
-					Msg("network: received message")
-			}
-		}
-	}()
-
-	n.host.SetStreamHandler("/reply", func(s network.Stream) {
-		var message Message
-
-		b, err := io.ReadAll(s)
-		if err != nil {
-			log.Error().Err(err).Msg("network: failed to read reply")
-		}
-
-		if err = json.Unmarshal(b, &message); err != nil {
-			log.Error().Err(err).Msg("network: failed to unmarshal reply")
-		}
-
-		switch message.Topic {
-		case Transaction:
-			// do something
-		case Block:
-			// do something
-		case Blockchain:
-			// do something
-		}
-	})
 }
 
 // HandlePeerFound gets called when a new peer is discovered.

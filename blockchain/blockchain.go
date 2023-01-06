@@ -3,96 +3,70 @@ package blockchain
 import (
 	"encoding/json"
 	"os"
-	"sync"
-	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
+// dumpFile the file name to whom the Blockchain should be written.
 const dumpFile string = "blockchain.json"
 
+// Blockchain holds all the blocks in the blockchain
 type Blockchain struct {
 	Blocks []Block `json:"blocks"`
-
-	wg    sync.WaitGroup
-	rw    sync.RWMutex // NOTE Lock might be required for concurrency, not sure yet.
-	close chan struct{}
 }
 
 // NewBlockchain creates a new Blockchain.
 func NewBlockchain() *Blockchain {
-	blockchain := &Blockchain{
+	return &Blockchain{
 		Blocks: make([]Block, 0),
-		wg:     sync.WaitGroup{},
-		rw:     sync.RWMutex{},
-		close:  make(chan struct{}, 0),
 	}
-
-	return blockchain
 }
 
-// Setup reads Blocks from a file and requests the Blockchain from other nodes.
-func (blockchain *Blockchain) Setup() {
-	var b Blockchain
-
-	// read blockchain from file.
-	if data, err := os.ReadFile(dumpFile); err == nil {
-		if err = json.Unmarshal(data, &b); err == nil {
-			// FIXME check the blockchain
-			blockchain.Blocks = b.Blocks
-		}
+func (b *Blockchain) AddBlock(block Block) error {
+	if err := b.verify(block); err != nil {
+		return err
 	}
 
-	// TODO get from nodes
-
-	// TODO create genesis block
-}
-
-// schedule starts an internal ticker with given interval.
-func (blockchain *Blockchain) schedule(interval time.Duration) error {
-	if interval == 0 {
-		return ErrInvalidArgument("interval can only be non-zero")
-	}
-
-	blockchain.wg.Add(1)
-
-	go func() {
-		defer blockchain.wg.Done()
-
-		ticker := time.NewTicker(interval)
-
-		for {
-			select {
-			case <-ticker.C:
-				// TODO create new Block
-				// Proof of stake
-			case <-blockchain.close:
-				ticker.Stop()
-
-				return
-			}
-		}
-	}()
+	b.Blocks = append(b.Blocks, block)
 
 	return nil
 }
 
-// Close closes and stops all running processes of the Blockchain.
-func (blockchain *Blockchain) Close() {
-	close(blockchain.close)
+func (b *Blockchain) verify(block Block) error {
+	// TODO
 
-	blockchain.dumpJSON()
-	blockchain.wg.Wait()
+	return nil
 }
 
-// dumpJSON writes the current Blockchain to a JSON file.
-func (blockchain *Blockchain) dumpJSON() {
-	data, err := json.MarshalIndent(blockchain, "", " ")
+func (b *Blockchain) CreateGenesis() {
+	// TODO
+}
+
+// BlocksFromFile returns all blocks that are written to the dumpfile.
+func (b *Blockchain) BlocksFromFile() ([]Block, error) {
+	var blockchain Blockchain
+
+	data, err := os.ReadFile(dumpFile)
 	if err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to marshal")
+		return nil, err
+	}
+
+	err = json.Unmarshal(data, &blockchain)
+	if err != nil {
+		return nil, err
+	}
+
+	return blockchain.Blocks, nil
+}
+
+// DumpJSON writes the current Blockchain to a JSON file.
+func (b *Blockchain) DumpJSON() error {
+	data, err := json.MarshalIndent(b, "", " ")
+	if err != nil {
+		return err
 	}
 
 	if err = os.WriteFile(dumpFile, data, 0600); err != nil { //nolint
-		log.Error().Err(err).Msg("blockchain: failed to write to file")
+		return err
 	}
+
+	return nil
 }
