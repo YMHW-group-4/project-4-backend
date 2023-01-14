@@ -141,3 +141,4 @@ fabric.properties
 ### Project ###
 build/
 blockchain.json
+*.env

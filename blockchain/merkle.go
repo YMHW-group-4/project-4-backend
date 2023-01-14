@@ -79,7 +79,7 @@ func newMerkleTree(data [][]byte) (*tree, error) {
 	}
 
 	if len(t.leaves) == 0 {
-		return nil, errors.ErrInvalidData("no nodes could be created from specified input")
+		return nil, errors.ErrInvalidInput("no nodes could be created from specified input")
 	}
 
 	t.root = t.buildRoot()
