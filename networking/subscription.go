@@ -18,12 +18,13 @@ const (
 	Transaction Topic = "transaction"
 	Block       Topic = "block"
 	Blockchain  Topic = "blockchain"
+	Consensus   Topic = "consensus"
 )
 
 // Subscription represents a Subscription within the Network.
 type Subscription struct {
 	Messages chan Message
-	Topic    Topic
+	topic    Topic
 	self     peer.ID
 	ctx      context.Context
 	top      *pubsub.Topic
@@ -46,7 +47,7 @@ func NewSubscription(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic
 
 	s := &Subscription{
 		Messages: make(chan Message, 0),
-		Topic:    topic,
+		topic:    topic,
 		self:     host,
 		ctx:      ctx,
 		top:      top,

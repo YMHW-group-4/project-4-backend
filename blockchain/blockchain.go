@@ -8,7 +8,7 @@ import (
 // dumpFile the file name to whom the Blockchain should be written.
 const dumpFile string = "blockchain.json"
 
-// Blockchain holds all the blocks in the blockchain
+// Blockchain holds all the blocks in the Blockchain.
 type Blockchain struct {
 	Blocks []Block `json:"blocks"`
 }
@@ -37,11 +37,13 @@ func (b *Blockchain) verify(block Block) error {
 }
 
 func (b *Blockchain) CreateGenesis() {
-	// TODO
+	// FIXME
+	block, _ := CreateBlock([]Transaction{}, []byte("test"))
+	b.Blocks = append(b.Blocks, block)
 }
 
-// BlocksFromFile returns all blocks that are written to the dumpfile.
-func (b *Blockchain) BlocksFromFile() ([]Block, error) {
+// FromFile returns all blocks that are written to the dumpfile.
+func (b *Blockchain) FromFile() ([]Block, error) {
 	var blockchain Blockchain
 
 	data, err := os.ReadFile(dumpFile)

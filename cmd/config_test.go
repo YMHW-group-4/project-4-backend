@@ -11,5 +11,6 @@ func TestGetConfigFromEnv(t *testing.T) {
 
 	assert.Equal(t, false, config.Debug)
 	assert.Equal(t, 30333, config.Port)
-	assert.Equal(t, 8080, config.ApiPort)
+	assert.Equal(t, 8080, config.APIPort)
+	assert.Equal(t, "10m", config.Interval)
 }
