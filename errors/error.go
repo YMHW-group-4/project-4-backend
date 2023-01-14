@@ -6,13 +6,13 @@ import (
 )
 
 // errInvalidArgument is the base error for ErrInvalidArgument.
-var errInvalidArgument = errors.New("argument is invalid")
+var errInvalidArgument = errors.New("invalid argument")
 
 // errInvalidInput is the base error for ErrInvalidInput.
 var errInvalidInput = errors.New("invalid input")
 
 // errInvalidOperation is the base error for ErrInvalidOperation.
-var errInvalidOperation = errors.New("invalid transaction")
+var errInvalidOperation = errors.New("invalid operation")
 
 // ErrInvalidArgument can be used when an argument is invalid. A message can be specified
 // using the standard golang formatting rules.
