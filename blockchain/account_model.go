@@ -1,9 +1,11 @@
 package blockchain
 
 import (
-	"backend/errors"
-	"github.com/rs/zerolog/log"
 	"sync"
+
+	"backend/errors"
+
+	"github.com/rs/zerolog/log"
 )
 
 // AccountModel is the structure of the account model that is used in the blockchain.
