@@ -33,24 +33,24 @@ func setLogLevel(debug bool) {
 func main() {
 	startup := time.Now()
 	config := getConfigFromEnv()
-	setLogLevel(config.debug)
+	setLogLevel(config.Debug)
 	setupLogger()
 
 	log.Info().
 		Str("version", version).
-		Int("port", config.port).
-		Bool("debug", config.debug).
+		Int("port", config.Port).
+		Bool("debug", config.Debug).
 		Msg("node: startup")
 
-	node, err := newNode(config)
+	node, err := NewNode(config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("node: failed to create node")
 	}
 
-	node.run()
+	node.Run()
 
 	log.Info().
-		TimeDiff("startup", time.Now(), startup).
+		TimeDiff("startup", node.Uptime, startup).
 		Msg("node: running")
 
 	node.handleSigterm()

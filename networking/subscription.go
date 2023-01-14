@@ -17,19 +17,19 @@ type Topic string
 const (
 	Transaction Topic = "transaction"
 	Block       Topic = "block"
+	Blockchain  Topic = "blockchain"
 )
 
 // Subscription represents a Subscription within the Network.
 type Subscription struct {
 	Messages chan Message
 	Topic    Topic
-
-	self  peer.ID
-	ctx   context.Context
-	top   *pubsub.Topic
-	sub   *pubsub.Subscription
-	wg    sync.WaitGroup
-	close chan struct{}
+	self     peer.ID
+	ctx      context.Context
+	top      *pubsub.Topic
+	sub      *pubsub.Subscription
+	wg       sync.WaitGroup
+	close    chan struct{}
 }
 
 // NewSubscription creates a new Subscription on given topic.
