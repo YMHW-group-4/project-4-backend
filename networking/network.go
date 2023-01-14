@@ -28,13 +28,12 @@ type discoveryNotifee struct {
 
 // Network represents a peer-to-peer network.
 type Network struct {
-	Messages []Message
-	ctx      context.Context
-	Host     host.Host
-	ps       *pubsub.PubSub
-	Subs     map[Topic]*Subscription
-	wg       sync.WaitGroup
-	close    chan struct{}
+	Host  host.Host
+	Subs  map[Topic]*Subscription
+	ctx   context.Context
+	ps    *pubsub.PubSub
+	wg    sync.WaitGroup
+	close chan struct{}
 }
 
 // NewNetwork creates a new Network with given port.
@@ -61,13 +60,12 @@ func NewNetwork(port int) (*Network, error) {
 	}
 
 	return &Network{
-		Messages: make([]Message, 0),
-		ctx:      ctx,
-		Host:     h,
-		ps:       ps,
-		Subs:     make(map[Topic]*Subscription, 0),
-		wg:       sync.WaitGroup{},
-		close:    make(chan struct{}, 0),
+		Host:  h,
+		Subs:  make(map[Topic]*Subscription, 0),
+		ctx:   ctx,
+		ps:    ps,
+		wg:    sync.WaitGroup{},
+		close: make(chan struct{}, 0),
 	}, nil
 }
 
@@ -90,7 +88,7 @@ func (n *Network) ConnectedPeers() int {
 }
 
 // Publish publishes a Message to given Topic.
-func (n *Network) Publish(topic Topic, payload string) error {
+func (n *Network) Publish(topic Topic, payload []byte) error {
 	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
 	if err != nil {
 		return err
@@ -105,7 +103,7 @@ func (n *Network) Publish(topic Topic, payload string) error {
 
 // Request alias for Publish to quickly make a request on a Topic.
 func (n *Network) Request(topic Topic) error {
-	if err := n.Publish(topic, "request"); err != nil {
+	if err := n.Publish(topic, []byte("request")); err != nil {
 		return err
 	}
 
@@ -113,8 +111,13 @@ func (n *Network) Request(topic Topic) error {
 }
 
 // Reply sends a Message to one given peer.
-func (n *Network) Reply(peer peer.ID, topic Topic, payload string) error {
-	s, err := n.Host.NewStream(n.ctx, peer, "/reply")
+func (n *Network) Reply(node string, topic Topic, payload []byte) error {
+	id, err := peer.Decode(node)
+	if err != nil {
+		return err
+	}
+
+	s, err := n.Host.NewStream(n.ctx, id, "/reply")
 	if err != nil {
 		return err
 	}
@@ -138,7 +141,6 @@ func (n *Network) Reply(peer peer.ID, topic Topic, payload string) error {
 // Close closes the Network.
 func (n *Network) Close() error {
 	close(n.close)
-	n.Host.RemoveStreamHandler("/reply")
 
 	for _, sub := range n.Subs {
 		if err := sub.Close(); err != nil {

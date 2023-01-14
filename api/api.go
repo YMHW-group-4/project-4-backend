@@ -1,27 +1,61 @@
 package api
 
 import (
+	"backend/api/endpoints"
 	"context"
-	"crypto/tls"
+	"errors"
+	"fmt"
 	"net/http"
+	"sync"
+
+	"github.com/rs/zerolog/log"
 )
 
+// API represents the HTTP API.
 type API struct {
-	ctx     context.Context
-	handler http.Handler
-	config  *tls.Config
+	server *http.Server
+	wg     sync.WaitGroup
 }
 
+// NewAPI creates a new HTTP API.
 func NewAPI(port int) *API {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/transaction", endpoints.Transaction)
+	mux.HandleFunc("/wallet", endpoints.Wallet)
+
 	return &API{
-		ctx: context.Background(),
+		server: &http.Server{
+			Addr:    fmt.Sprintf(":%d", port),
+			Handler: mux,
+		},
 	}
 }
 
-//func (a *Api) handleRequests() {
-//	http.HandleFunc()
-//}
+// Stop stops the API.
+func (a *API) Stop() error {
+	ctx := context.Background()
 
-func (a *API) Start() error {
+	defer ctx.Done()
+
+	if err := a.server.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	a.wg.Wait()
+
 	return nil
+}
+
+// Start starts the API.
+func (a *API) Start() {
+	a.wg.Add(1)
+
+	go func() {
+		defer a.wg.Done()
+
+		if err := a.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Error().Err(err).Msg("API: failed to serve")
+		}
+	}()
 }

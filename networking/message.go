@@ -7,11 +7,11 @@ import "encoding/json"
 type Message struct {
 	Peer    string `json:"peer"`
 	Topic   Topic  `json:"topic"`
-	Payload string `json:"payload"`
+	Payload []byte `json:"payload"`
 }
 
 // NewMessage creates a JSON encoded Message.
-func NewMessage(peer string, topic Topic, payload string) ([]byte, error) {
+func NewMessage(peer string, topic Topic, payload []byte) ([]byte, error) {
 	return json.Marshal(Message{
 		Peer:    peer,
 		Topic:   topic,

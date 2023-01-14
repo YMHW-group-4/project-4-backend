@@ -38,7 +38,9 @@ func main() {
 
 	log.Info().
 		Str("version", version).
-		Int("port", config.Port).
+		Int("blockchain_port", config.Port).
+		Int("API_port", config.APIPort).
+		Str("interval", config.Interval).
 		Bool("debug", config.Debug).
 		Msg("node: startup")
 
@@ -53,5 +55,5 @@ func main() {
 		TimeDiff("startup", node.Uptime, startup).
 		Msg("node: running")
 
-	node.handleSigterm()
+	node.HandleSigterm()
 }
