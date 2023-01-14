@@ -8,8 +8,11 @@ import (
 // errInvalidArgument is the base error for ErrInvalidArgument.
 var errInvalidArgument = errors.New("argument is invalid")
 
-// errInvalidData the base error for ErrInvalidData.
-var errInvalidData = errors.New("invalid data")
+// errInvalidInput is the base error for ErrInvalidInput.
+var errInvalidInput = errors.New("invalid input")
+
+// errInvalidOperation is the base error for ErrInvalidOperation.
+var errInvalidOperation = errors.New("invalid transaction")
 
 // ErrInvalidArgument can be used when an argument is invalid. A message can be specified
 // using the standard golang formatting rules.
@@ -17,8 +20,14 @@ func ErrInvalidArgument(format string, a ...interface{}) error {
 	return fmt.Errorf("%w: %s", errInvalidArgument, fmt.Sprintf(format, a...))
 }
 
-// ErrInvalidData can be used when the data is invalid. A message can be specified
+// ErrInvalidInput can be used when the input is invalid. A message can be specified
 // using the standard golang formatting rules.
-func ErrInvalidData(format string, a ...interface{}) error {
-	return fmt.Errorf("%w: %s", errInvalidData, fmt.Sprintf(format, a...))
+func ErrInvalidInput(format string, a ...interface{}) error {
+	return fmt.Errorf("%w: %s", errInvalidInput, fmt.Sprintf(format, a...))
+}
+
+// ErrInvalidOperation can be used when the operation is invalid. A message can be specified
+// using the standard golang formatting rules.
+func ErrInvalidOperation(format string, a ...interface{}) error {
+	return fmt.Errorf("%w: %s", errInvalidOperation, fmt.Sprintf(format, a...))
 }
