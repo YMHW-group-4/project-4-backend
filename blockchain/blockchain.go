@@ -11,12 +11,23 @@ const dumpFile string = "blockchain.json"
 // Blockchain holds all the blocks in the Blockchain.
 type Blockchain struct {
 	Blocks []Block `json:"blocks"`
+	mp     *mempool
+	am     *accountModel
 }
 
 // NewBlockchain creates a new Blockchain.
 func NewBlockchain() *Blockchain {
 	return &Blockchain{
 		Blocks: make([]Block, 0),
+		mp:     newMempool(),
+		am:     newAccountModel(),
+	}
+}
+
+// Init initializes the account model of the Blockchain.
+func (b *Blockchain) Init() {
+	if len(b.Blocks) > 0 {
+		b.am.fromBlocks(b.Blocks)
 	}
 }
 
