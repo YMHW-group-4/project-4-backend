@@ -4,78 +4,96 @@ import (
 	"sync"
 
 	"backend/errors"
-
-	"github.com/rs/zerolog/log"
 )
 
-// AccountModel is the structure of the account model that is used in the blockchain.
-type AccountModel struct {
-	Balances map[string]float32
-	wg       sync.WaitGroup
-	rw       sync.RWMutex // TODO implement lock for concurrent map access
+// accountModel holds the balances of all keys.
+type accountModel struct {
+	balances map[string]float32
+	mu       sync.RWMutex
 }
 
-// NewAccountModel creates a new AccountModel.
-func NewAccountModel() *AccountModel {
-	return &AccountModel{
-		Balances: make(map[string]float32),
+// newAccountModel creates a new accountModel.
+func newAccountModel() *accountModel {
+	return &accountModel{
+		balances: make(map[string]float32),
 	}
 }
 
-func (am *AccountModel) BalanceFromBlocks(blocks []Block) {
-	if len(am.Balances) > 0 {
-		am.Balances = make(map[string]float32)
+// fromBlocks generates the balances from every block.
+// Should only be called on blockchain boot. Newly created blocks to be
+// retrieved by fromBlock.
+func (am *accountModel) fromBlocks(blocks []Block) {
+	var wg sync.WaitGroup
+
+	if len(am.balances) > 0 {
+		am.balances = make(map[string]float32)
 	}
 
 	for _, block := range blocks {
-		am.wg.Add(1)
+		wg.Add(1)
 
 		go func(block Block) {
-			defer am.wg.Done()
-			// TODO
+			defer wg.Done()
+
+			am.fromBlock(block)
 		}(block)
 	}
 
-	am.wg.Wait()
+	wg.Wait()
 }
 
-func (am *AccountModel) BalanceFromBlock(block Block) {
+// fromBlock generates the balances from a single block.
+func (am *accountModel) fromBlock(block Block) {
+	// FIXME could be changed; transaction structure might be changed.
 	for _, transaction := range block.Transactions {
-		log.Debug().Msgf("%v", transaction)
-		// TODO
+		am.mu.Lock()
+
+		am.balances[transaction.PubKeyTx] = am.balances[transaction.PubKeyTx] - transaction.Amount
+		am.balances[transaction.PubKeyRx] = am.balances[transaction.PubKeyRx] + transaction.Amount
+
+		am.mu.Unlock()
 	}
 }
 
-// Exists checks if the given key is already in the AccountModel.
-func (am *AccountModel) Exists(key string) bool {
-	_, ok := am.Balances[key]
+// exists checks if the given key is already in the accountModel.
+func (am *accountModel) exists(key string) bool {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+
+	_, ok := am.balances[key]
 
 	return ok
 }
 
-// Add adds the given key to the AccountModel.
-func (am *AccountModel) Add(key string) error {
-	if am.Exists(key) {
+// add adds the given key to the accountModel.
+func (am *accountModel) add(key string) error {
+	if am.exists(key) {
 		return errors.ErrInvalidInput("key already exists")
 	}
 
-	am.Balances[key] = 0
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	am.balances[key] = 0
 
 	return nil
 }
 
-// Update updates the balance of the given key.
-func (am *AccountModel) Update(key string, amount float32) error {
-	if !am.Exists(key) {
+// update updates the balance of the given key.
+func (am *accountModel) update(key string, amount float32) error {
+	if !am.exists(key) {
 		return errors.ErrInvalidInput("key does not exist")
 	}
 
 	// this should not happen
-	if 0 > (am.Balances[key] + amount) {
+	if 0 > (am.balances[key] + amount) {
 		return errors.ErrInvalidOperation("balance cannot be negative")
 	}
 
-	am.Balances[key] += amount
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	am.balances[key] += amount
 
 	return nil
 }

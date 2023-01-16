@@ -172,6 +172,8 @@ func (n *Node) setup() {
 
 			// clear blocks
 			blocks = nil
+
+			n.blockchain.Init()
 		}
 	}
 
@@ -241,6 +243,7 @@ func (n *Node) listen() {
 
 // HandleSigterm executes when termination from operating system is received.
 // An attempt to gracefully shut down all required services of the node will be made.
+// Execution will block until signal has been received; executing thread will wait on channel.
 func (n *Node) HandleSigterm() {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)

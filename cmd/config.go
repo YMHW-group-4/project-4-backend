@@ -19,8 +19,7 @@ type Configuration struct {
 func getConfigFromEnv() Configuration {
 	interval := util.GetEnv("INTERVAL", "10m")
 
-	_, err := time.ParseDuration(interval)
-	if err != nil {
+	if _, err := time.ParseDuration(interval); err != nil {
 		interval = "10m"
 	}
 
