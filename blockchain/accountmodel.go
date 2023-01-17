@@ -42,12 +42,12 @@ func (am *accountModel) fromBlocks(block ...Block) {
 			for _, transaction := range b.Transactions {
 				am.Lock()
 
-				rx := am.accounts[transaction.Sender]
-				tx := am.accounts[transaction.Receiver]
+				tx := am.accounts[transaction.Sender]
+				rx := am.accounts[transaction.Receiver]
 
-				if rx != nil {
-					rx.balance -= transaction.Amount
-					rx.transactions++
+				if tx != nil {
+					tx.balance -= transaction.Amount
+					tx.transactions++
 				} else {
 					// this should not happen.
 					// sender should always exist; default balance is zero.
@@ -58,8 +58,8 @@ func (am *accountModel) fromBlocks(block ...Block) {
 					}
 				}
 
-				if tx != nil {
-					tx.balance += transaction.Amount
+				if rx != nil {
+					rx.balance += transaction.Amount
 				} else {
 					am.accounts[transaction.Receiver] = &account{
 						balance:      transaction.Amount,
