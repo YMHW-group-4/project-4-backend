@@ -6,75 +6,122 @@ import (
 	"backend/errors"
 )
 
-// accountModel holds the balances of all keys.
+// account represents an account within the accountModel.
+// It holds the balance and the number of transactions done by the account.
+type account struct {
+	balance      float32
+	transactions uint32
+}
+
+// accountModel holds the accounts of all keys.
 type accountModel struct {
-	balances map[string]float32
-	mu       sync.RWMutex
+	sync.RWMutex
+	accounts map[string]*account
 }
 
 // newAccountModel creates a new accountModel.
 func newAccountModel() *accountModel {
 	return &accountModel{
-		balances: make(map[string]float32),
+		accounts: make(map[string]*account),
 	}
 }
 
 // fromBlocks generates the balances from every block.
-// Should only be called on blockchain boot. Newly created blocks to be
-// retrieved by fromBlock.
-func (am *accountModel) fromBlocks(blocks []Block) {
+// Method should only be called on blockchain initialization.
+// Assumption is that every block within the blockchain are valid.
+// That also means that all transactions in a block are valid.
+func (am *accountModel) fromBlocks(block ...Block) {
 	var wg sync.WaitGroup
 
-	if len(am.balances) > 0 {
-		am.balances = make(map[string]float32)
-	}
-
-	for _, block := range blocks {
+	for _, b := range block {
 		wg.Add(1)
 
-		go func(block Block) {
+		go func() {
 			defer wg.Done()
 
-			am.fromBlock(block)
-		}(block)
-	}
+			for _, transaction := range b.Transactions {
+				am.Lock()
 
-	wg.Wait()
+				rx := am.accounts[transaction.Sender]
+				tx := am.accounts[transaction.Receiver]
+
+				if rx != nil {
+					rx.balance -= transaction.Amount
+					rx.transactions++
+				} else {
+					// this should not happen.
+					// sender should always exist; default balance is zero.
+					// transaction should be verified before its being forged into a block.
+					am.accounts[transaction.Sender] = &account{
+						balance:      0,
+						transactions: 1,
+					}
+				}
+
+				if tx != nil {
+					tx.balance += transaction.Amount
+				} else {
+					am.accounts[transaction.Receiver] = &account{
+						balance:      transaction.Amount,
+						transactions: 0,
+					}
+				}
+
+				am.Unlock()
+			}
+		}()
+
+		wg.Wait()
+	}
 }
 
-// fromBlock generates the balances from a single block.
-func (am *accountModel) fromBlock(block Block) {
-	// FIXME could be changed; transaction structure might be changed.
-	for _, transaction := range block.Transactions {
-		am.mu.Lock()
-
-		am.balances[transaction.PubKeyTx] = am.balances[transaction.PubKeyTx] - transaction.Amount
-		am.balances[transaction.PubKeyRx] = am.balances[transaction.PubKeyRx] + transaction.Amount
-
-		am.mu.Unlock()
+// clear clears the accountModel.
+func (am *accountModel) clear() {
+	if len(am.accounts) > 0 {
+		am.accounts = make(map[string]*account)
 	}
+}
+
+// get returns the account associated with given key.
+func (am *accountModel) get(key string) (*account, error) {
+	if !am.exists(key) {
+		return nil, errors.ErrInvalidInput("key does not exist")
+	}
+
+	am.RLock()
+	defer am.RUnlock()
+
+	return am.accounts[key], nil
 }
 
 // exists checks if the given key is already in the accountModel.
 func (am *accountModel) exists(key string) bool {
-	am.mu.RLock()
-	defer am.mu.RUnlock()
+	am.RLock()
+	defer am.RUnlock()
 
-	_, ok := am.balances[key]
+	_, ok := am.accounts[key]
 
 	return ok
 }
 
 // add adds the given key to the accountModel.
-func (am *accountModel) add(key string) error {
+func (am *accountModel) add(key string, balance float32, transactions uint32) error {
 	if am.exists(key) {
 		return errors.ErrInvalidInput("key already exists")
 	}
 
-	am.mu.Lock()
-	defer am.mu.Unlock()
+	// this should not happen
+	if 0 > balance {
+		return errors.ErrInvalidOperation("balance cannot be negative")
+	}
 
-	am.balances[key] = 0
+	am.Lock()
+	defer am.Unlock()
+
+	am.accounts[key] = &account{
+		balance:      balance,
+		transactions: transactions,
+	}
 
 	return nil
 }
@@ -86,14 +133,15 @@ func (am *accountModel) update(key string, amount float32) error {
 	}
 
 	// this should not happen
-	if 0 > (am.balances[key] + amount) {
+	if 0 > (am.accounts[key].balance + amount) {
 		return errors.ErrInvalidOperation("balance cannot be negative")
 	}
 
-	am.mu.Lock()
-	defer am.mu.Unlock()
+	am.Lock()
+	defer am.Unlock()
 
-	am.balances[key] += amount
+	am.accounts[key].balance += amount
+	am.accounts[key].transactions++
 
 	return nil
 }

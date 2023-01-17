@@ -1,22 +1,18 @@
 package wallet
 
-import (
-	"fmt"
+import "github.com/tyler-smith/go-bip39"
 
-	"github.com/tyler-smith/go-bip32"
-	"github.com/tyler-smith/go-bip39"
-)
+// generateMnemonic generates a new mnenomic according to the bip39 specification.
+func generateMnemonic() (string, error) {
+	entropy, err := bip39.NewEntropy(256) //nolint
+	if err != nil {
+		return "", err
+	}
 
-func generateMnemonic(passphrase string) {
-	entropy, _ := bip39.NewEntropy(256) //nolint
-	mnemonic, _ := bip39.NewMnemonic(entropy)
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		return "", err
+	}
 
-	seed := bip39.NewSeed(mnemonic, passphrase)
-
-	masterKey, _ := bip32.NewMasterKey(seed)
-	publicKey := masterKey.PublicKey()
-
-	fmt.Println("Mnemonic: ", mnemonic)
-	fmt.Println("Master private key: ", masterKey)
-	fmt.Println("Master public key: ", publicKey)
+	return mnemonic, nil
 }

@@ -10,8 +10,8 @@ import (
 // mempool represents the memory pool within the Blockchain.
 // It acts as a storage for unconfirmed Transactions.
 type mempool struct {
+	sync.RWMutex
 	pool map[string]Transaction
-	mu   sync.RWMutex
 }
 
 // newMempool creates a new memory pool.
@@ -23,16 +23,16 @@ func newMempool() *mempool {
 
 // clear clears the internal pool.
 func (mp *mempool) clear() {
-	mp.mu.Lock()
-	defer mp.mu.Unlock()
+	mp.Lock()
+	defer mp.Unlock()
 
 	mp.pool = make(map[string]Transaction)
 }
 
 // exists checks if the given key is already in the mempool.
 func (mp *mempool) exists(key string) bool {
-	mp.mu.RLock()
-	defer mp.mu.RUnlock()
+	mp.RLock()
+	defer mp.RUnlock()
 
 	_, ok := mp.pool[key]
 
@@ -52,11 +52,11 @@ func (mp *mempool) add(transaction ...Transaction) error {
 			continue
 		}
 
-		mp.mu.Lock()
+		mp.Lock()
 
 		mp.pool[key] = tx
 
-		mp.mu.Unlock()
+		mp.Unlock()
 	}
 
 	return err
@@ -65,8 +65,8 @@ func (mp *mempool) add(transaction ...Transaction) error {
 // retrieve retrieves transactions from the mempool.
 // If 0 is passed, all transactions in the mempool will be returned.
 func (mp *mempool) retrieve(amount uint16) []Transaction {
-	mp.mu.RLock()
-	defer mp.mu.RUnlock()
+	mp.RLock()
+	defer mp.RUnlock()
 
 	if amount == 0 {
 		amount = uint16(len(mp.pool))
@@ -98,11 +98,11 @@ func (mp *mempool) delete(transaction ...Transaction) error {
 			continue
 		}
 
-		mp.mu.Lock()
+		mp.Lock()
 
 		delete(mp.pool, key)
 
-		mp.mu.Unlock()
+		mp.Unlock()
 	}
 
 	return err
