@@ -3,6 +3,7 @@ package blockchain
 import (
 	"encoding/json"
 	"os"
+	"time"
 )
 
 // dumpFile the file name to whom the Blockchain should be written.
@@ -27,7 +28,7 @@ func NewBlockchain() *Blockchain {
 // Init initializes the account model of the Blockchain.
 func (b *Blockchain) Init() {
 	if len(b.Blocks) > 0 {
-		b.am.fromBlocks(b.Blocks)
+		b.am.fromBlocks(b.Blocks...)
 	}
 }
 
@@ -37,6 +38,28 @@ func (b *Blockchain) AddBlock(block Block) error {
 	}
 
 	b.Blocks = append(b.Blocks, block)
+
+	return nil
+}
+
+func (b *Blockchain) CreateTransaction(sender string, receiver string, amount float32) error {
+	if !b.am.exists(sender) {
+
+	}
+
+	tx, err := b.am.get(sender)
+	if err != nil {
+		return err
+	}
+
+	_ = Transaction{
+		Sender:    sender,
+		Receiver:  receiver,
+		Signature: "", // TODO
+		Amount:    amount,
+		Nonce:     tx.transactions,
+		Timestamp: time.Now().Unix(),
+	}
 
 	return nil
 }

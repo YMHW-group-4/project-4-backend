@@ -4,29 +4,46 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-var transactions = []mockTransaction{
-	{From: "mike", To: "bob", Value: "100"},
-	{From: "bob", To: "douglas", Value: "250"},
-	{From: "alice", To: "john", Value: "100"},
-	{From: "patrick", To: "steve", Value: "1000"},
+var transactions = []Transaction{
+	{
+		Sender:    "mike",
+		Receiver:  "bob",
+		Signature: "signature",
+		Amount:    100,
+		Nonce:     1,
+		Timestamp: 123456789,
+	},
+	{
+		Sender:    "bob",
+		Receiver:  "douglas",
+		Signature: "signature",
+		Amount:    250,
+		Nonce:     1,
+		Timestamp: 123456789,
+	},
+	{
+		Sender:    "alice",
+		Receiver:  "john",
+		Signature: "signature",
+		Amount:    100,
+		Nonce:     1,
+		Timestamp: 123456789,
+	},
+	{
+		Sender:    "patrick",
+		Receiver:  "steve",
+		Signature: "signature",
+		Amount:    1000,
+		Nonce:     1,
+		Timestamp: 123456789,
+	},
 }
 
-type mockBlock struct {
-	Transactions []mockTransaction `json:"transactions"`
-}
-
-type mockTransaction struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Value string `json:"value"`
-}
-
-func hashTransactions(t []mockTransaction) [][]byte {
+func hashTransactions(t []Transaction) [][]byte {
 	data := make([][]byte, 0)
 	h := sha256.New()
 
@@ -60,11 +77,39 @@ func TestEqualTreeRoots(t *testing.T) {
 }
 
 func TestNonEqualTreeRoots(t *testing.T) {
-	cTransactions := []mockTransaction{
-		{From: "mike", To: "bob", Value: "100"},
-		{From: "bob", To: "douglas", Value: "250"},
-		{From: "alice", To: "john", Value: "100"},
-		{From: "patrick", To: "steve", Value: "375"}, // 1000 -> 375
+	cTransactions := []Transaction{
+		{
+			Sender:    "mike",
+			Receiver:  "bob",
+			Signature: "signature",
+			Amount:    100,
+			Nonce:     1,
+			Timestamp: 123456789,
+		},
+		{
+			Sender:    "bob",
+			Receiver:  "douglas",
+			Signature: "signature",
+			Amount:    250,
+			Nonce:     1,
+			Timestamp: 123456789,
+		},
+		{
+			Sender:    "alice",
+			Receiver:  "john",
+			Signature: "signature",
+			Amount:    100,
+			Nonce:     1,
+			Timestamp: 123456789,
+		},
+		{
+			Sender:    "patrick",
+			Receiver:  "steve",
+			Signature: "signature",
+			Amount:    375, // 1000 -> 375
+			Nonce:     1,
+			Timestamp: 123456789,
+		},
 	}
 
 	data := hashTransactions(transactions)
@@ -76,9 +121,9 @@ func TestNonEqualTreeRoots(t *testing.T) {
 }
 
 func TestEqualTreeRootsSerialized(t *testing.T) {
-	var b mockBlock
+	var b Block
 
-	block := &mockBlock{transactions}
+	block, _ := CreateBlock(transactions, []byte("none")) //nolint
 
 	s, _ := json.Marshal(block) //nolint
 	_ = json.Unmarshal(s, &b)   //nolint
