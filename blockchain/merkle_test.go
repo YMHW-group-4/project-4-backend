@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -42,18 +41,6 @@ var transactions = []Transaction{
 		Nonce:     1,
 		Timestamp: 123456789,
 	},
-}
-
-func hashTransactions(t []Transaction) [][]byte {
-	data := make([][]byte, 0)
-	h := sha256.New()
-
-	for _, tx := range t {
-		h.Write([]byte(fmt.Sprintf("%v", tx)))
-		data = append(data, h.Sum(nil))
-	}
-
-	return data
 }
 
 func TestNewEmptyMerkleTree(t *testing.T) {
@@ -137,7 +124,6 @@ func TestEqualTreeRootsSerialized(t *testing.T) {
 
 	assert.Equal(t, tr1.root.hash, tr2.root.hash)
 }
-
 func TestNewMerkleNode(t *testing.T) {
 	data := [][]byte{
 		[]byte("node1"),

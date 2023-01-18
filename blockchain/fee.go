@@ -1,3 +1,3 @@
 package blockchain
 
-const feePercentage = 0.010
+const feePercentage = 0.01

@@ -2,11 +2,17 @@ package blockchain
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"time"
 )
 
+// errInvalidBlock is the base error when a block is invalid.
+var errInvalidBlock = errors.New("invalid block")
+
+// Block represents a singular block of the blockchain.
 type Block struct {
+	Validator    string        `json:"validator"`
 	MerkleRoot   []byte        `json:"merkleRoot"`
 	PrevHash     []byte        `json:"prevHash"`
 	Height       int           `json:"height"`
@@ -15,17 +21,7 @@ type Block struct {
 }
 
 func CreateBlock(transactions []Transaction, prevHash []byte) (Block, error) {
-	// FIXME find other way of hashing transactions for merkle tree (?)
-	// perhaps pass type T to tree and do internal hashing in the tree.
-	data := make([][]byte, 0)
-	h := sha256.New()
-
-	for _, t := range transactions {
-		h.Write([]byte(fmt.Sprintf("%v", t)))
-		data = append(data, h.Sum(nil))
-	}
-
-	t, err := newMerkleTree(data)
+	t, err := newMerkleTree(hashTransactions(transactions))
 	if err != nil {
 		return Block{}, err
 	}
@@ -39,9 +35,15 @@ func CreateBlock(transactions []Transaction, prevHash []byte) (Block, error) {
 	}, nil
 }
 
+// string returns the block as a string.
+func (b Block) string() string {
+	return fmt.Sprintf("%v", b)
+}
+
+// hash returns the hash of the block.
 func (b Block) hash() []byte {
 	h := sha256.New()
-	h.Write([]byte(fmt.Sprintf("%v", b)))
+	h.Write([]byte(b.string()))
 
 	return h.Sum(nil)
 }
