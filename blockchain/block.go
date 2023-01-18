@@ -38,3 +38,10 @@ func CreateBlock(transactions []Transaction, prevHash []byte) (Block, error) {
 		Transactions: transactions,
 	}, nil
 }
+
+func (b Block) hash() []byte {
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("%v", b)))
+
+	return h.Sum(nil)
+}

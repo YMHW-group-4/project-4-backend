@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"time"
@@ -65,7 +66,19 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, amount fl
 }
 
 func (b *Blockchain) verify(block Block) error {
-	// TODO
+	last := b.Blocks[len(b.Blocks)-1]
+
+	if res := bytes.Compare(last.hash(), block.PrevHash); res != 0 {
+		return ErrInvalidBLock("hash does not match")
+	}
+
+	if last.Timestamp > block.Timestamp {
+		return ErrInvalidBLock("timestamp is in the past")
+	}
+
+	if len(block.Transactions) == 0 {
+		return ErrInvalidBLock("zero transactions")
+	}
 
 	return nil
 }

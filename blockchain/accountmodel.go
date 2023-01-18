@@ -85,7 +85,7 @@ func (am *accountModel) clear() {
 // get returns the account associated with given key.
 func (am *accountModel) get(key string) (*account, error) {
 	if !am.exists(key) {
-		return nil, errors.ErrInvalidInput("key does not exist")
+		return nil, errors.ErrInvalidOperation("key does not exist")
 	}
 
 	am.RLock()
@@ -107,7 +107,7 @@ func (am *accountModel) exists(key string) bool {
 // add adds the given key to the accountModel.
 func (am *accountModel) add(key string, balance float32, transactions uint32) error {
 	if am.exists(key) {
-		return errors.ErrInvalidInput("key already exists")
+		return errors.ErrInvalidOperation("key already exists")
 	}
 
 	// this should not happen
@@ -129,7 +129,7 @@ func (am *accountModel) add(key string, balance float32, transactions uint32) er
 // update updates the balance of the given key.
 func (am *accountModel) update(key string, amount float32) error {
 	if !am.exists(key) {
-		return errors.ErrInvalidInput("key does not exist")
+		return errors.ErrInvalidOperation("key does not exist")
 	}
 
 	// this should not happen

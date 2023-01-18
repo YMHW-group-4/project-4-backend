@@ -29,7 +29,7 @@ func generateMasterKey(mnemonic string, password string) (*bip32.Key, error) {
 // generateChildKey generates a new child key from given master key.
 func generateChildKey(key *bip32.Key, childID uint32) (*bip32.Key, error) {
 	if !key.IsPrivate {
-		return nil, errors.ErrInvalidInput("non-private key provided")
+		return nil, errors.ErrInvalidArgument("non-private key provided")
 	}
 
 	child, err := key.NewChildKey(childID)

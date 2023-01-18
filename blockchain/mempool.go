@@ -47,7 +47,7 @@ func (mp *mempool) add(transaction ...Transaction) error {
 		key := entryKey(tx)
 
 		if mp.exists(key) {
-			err = errors.ErrInvalidInput(fmt.Sprintf("key %s already exists", key))
+			err = errors.ErrInvalidOperation(fmt.Sprintf("key %s already exists", key))
 
 			continue
 		}
@@ -93,7 +93,7 @@ func (mp *mempool) delete(transaction ...Transaction) error {
 		key := entryKey(tx)
 
 		if !mp.exists(key) {
-			err = errors.ErrInvalidInput(fmt.Sprintf("key %s does not exists", key))
+			err = errors.ErrInvalidOperation(fmt.Sprintf("key %s does not exists", key))
 
 			continue
 		}
