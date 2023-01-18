@@ -1,9 +1,10 @@
 package blockchain
 
 import (
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAccountModelFromBlock(t *testing.T) {
@@ -31,6 +32,10 @@ func TestAccountModelFromBlock(t *testing.T) {
 
 	am.fromBlocks(blocks...)
 
-	assert.Equal(t, uint32(10000), am.accounts["genesis"].transactions)
-	assert.Equal(t, float32(0), am.accounts["genesis"].balance)
+	e := &account{
+		balance:      0,
+		transactions: 10000,
+	}
+
+	assert.Equal(t, e, am.accounts["genesis"])
 }
