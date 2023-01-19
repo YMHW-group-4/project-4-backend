@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -50,4 +52,14 @@ func (t Transaction) hash() []byte {
 	h.Write([]byte(t.string()))
 
 	return h.Sum(nil)
+}
+
+// Sign signs the transaction and returns ASN.1 encoded signature
+func Sign(priv *ecdsa.PrivateKey, hash []byte) ([]byte, error) {
+	return ecdsa.SignASN1(rand.Reader, priv, hash)
+}
+
+// Verify verifies the transaction signature
+func Verify(pub *ecdsa.PublicKey, hash []byte, sig []byte) bool {
+	return ecdsa.VerifyASN1(pub, hash, sig)
 }
