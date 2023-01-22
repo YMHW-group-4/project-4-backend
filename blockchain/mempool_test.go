@@ -1,27 +1,45 @@
 package blockchain
 
 import (
+	"encoding/json"
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/suite"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMempoolDoubleTransaction(t *testing.T) {
-	mp := newMempool()
+type MempoolTestSuite struct {
+	suite.Suite
+	mp   *mempool
+	data []Transaction
+}
 
+func (suite *MempoolTestSuite) SetupTest() {
+	suite.mp = newMempool()
+}
+
+func TestMempoolSuite(t *testing.T) {
+	suite.Run(t, new(MempoolTestSuite))
+}
+
+func (suite *MempoolTestSuite) TestMempoolDoubleTransaction() {
 	transaction := Transaction{
 		Sender:    "Sender",
 		Receiver:  "Receiver",
-		Signature: "Signature",
+		Signature: string("Signature"),
 		Amount:    10,
 		Nonce:     1,
 		Timestamp: time.Now().Unix(),
 	}
 
-	err := mp.add([]Transaction{transaction, transaction}...)
+	x, _ := json.MarshalIndent([]Transaction{transaction, transaction}, "", " ") //nolint
+	log.Debug().Msgf("%s", x)
 
-	assert.NotNil(t, err)
+	err := suite.mp.add([]Transaction{transaction, transaction}...)
+
+	assert.NotNil(suite.T(), err)
 }
 
 func TestMempoolRetrieveTransactions(t *testing.T) {

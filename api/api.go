@@ -1,12 +1,13 @@
 package api
 
 import (
-	"backend/api/endpoints"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"sync"
+
+	"backend/api/endpoints"
 
 	"github.com/rs/zerolog/log"
 )

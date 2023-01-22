@@ -1,8 +1,6 @@
 package blockchain
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -21,26 +19,6 @@ type Transaction struct {
 	Timestamp int64   `json:"timestamp"`
 }
 
-//func CreateTransaction(amount float32) Transaction {
-//	return Transaction{
-//
-//		Amount:    amount,
-//		Nonce:
-//		Timestamp: time.Now().Unix(),
-//	}
-//}
-
-// hashTransactions returns the hash of all given transactions.
-func hashTransactions(transactions []Transaction) [][]byte {
-	data := make([][]byte, 0, len(transactions))
-
-	for _, t := range transactions {
-		data = append(data, t.hash())
-	}
-
-	return data
-}
-
 // string returns the transaction as a string.
 func (t Transaction) string() string {
 	return fmt.Sprintf("%v", t)
@@ -54,12 +32,13 @@ func (t Transaction) hash() []byte {
 	return h.Sum(nil)
 }
 
-// Sign signs the transaction and returns ASN.1 encoded signature
-func Sign(priv *ecdsa.PrivateKey, hash []byte) ([]byte, error) {
-	return ecdsa.SignASN1(rand.Reader, priv, hash)
-}
+// hashTransactions returns the hash of all given transactions.
+func hashTransactions(transactions []Transaction) [][]byte {
+	data := make([][]byte, 0, len(transactions))
 
-// Verify verifies the transaction signature
-func Verify(pub *ecdsa.PublicKey, hash []byte, sig []byte) bool {
-	return ecdsa.VerifyASN1(pub, hash, sig)
+	for _, t := range transactions {
+		data = append(data, t.hash())
+	}
+
+	return data
 }

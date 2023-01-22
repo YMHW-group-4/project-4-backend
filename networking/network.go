@@ -23,17 +23,18 @@ const discoveryServiceTag = "crypto"
 
 // discoveryNotifee gets notified when a new peer is discovered via mDNS.
 type discoveryNotifee struct {
-	host host.Host
+	host *Network
 }
 
 // Network represents a peer-to-peer network.
 type Network struct {
-	Host  host.Host
-	Subs  map[Topic]*Subscription
-	ctx   context.Context
-	ps    *pubsub.PubSub
-	wg    sync.WaitGroup
-	close chan struct{}
+	Host   host.Host
+	Subs   map[Topic]*Subscription
+	ctx    context.Context
+	ps     *pubsub.PubSub
+	wg     sync.WaitGroup
+	close  chan struct{}
+	notify chan struct{}
 }
 
 // NewNetwork creates a new Network with given port.
@@ -60,12 +61,13 @@ func NewNetwork(port int) (*Network, error) {
 	}
 
 	return &Network{
-		Host:  h,
-		Subs:  make(map[Topic]*Subscription, 0),
-		ctx:   ctx,
-		ps:    ps,
-		wg:    sync.WaitGroup{},
-		close: make(chan struct{}, 0),
+		Host:   h,
+		Subs:   make(map[Topic]*Subscription, 0),
+		ctx:    ctx,
+		ps:     ps,
+		wg:     sync.WaitGroup{},
+		close:  make(chan struct{}),
+		notify: make(chan struct{}),
 	}, nil
 }
 
@@ -160,7 +162,7 @@ func (n *Network) Close() error {
 // startMdns creates and starts a new mDNS service.
 // This automatically discovers peers on the same LAN and connects to them.
 func (n *Network) startMdns() error {
-	s := mdns.NewMdnsService(n.Host, discoveryServiceTag, &discoveryNotifee{host: n.Host})
+	s := mdns.NewMdnsService(n.Host, discoveryServiceTag, &discoveryNotifee{host: n})
 
 	return s.Start()
 }
@@ -179,16 +181,21 @@ func (n *Network) setupSubscriptions() error {
 	return nil
 }
 
+// Notify blocks until a peer has connected to the host.
+func (n *Network) Notify() <-chan struct{} {
+	return n.notify
+}
+
 // HandlePeerFound gets called when a new peer is discovered.
 // This will automatically connect with the discovered peer.
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	if err := n.host.Connect(context.Background(), pi); err != nil {
+	if err := n.host.Host.Connect(context.Background(), pi); err != nil {
 		log.Error().Err(err).Msg("network: failed to connect to peer")
 	}
 
-	log.Debug().
-		Int("peer(s)", len(n.host.Network().Peers())).
-		Msg("network: discovered peer")
+	log.Debug().Msg("network: connected to peer")
+
+	n.host.notify <- struct{}{}
 }
 
 // hostAddr makes address on given input ports for IPv4 and IPv6.

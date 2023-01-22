@@ -24,7 +24,7 @@ type node struct {
 
 // newMerkleNode creates a new node to be used in the Merkle tree.
 func newMerkleNode(left, right *node, data []byte) *node {
-	n := node{}
+	n := &node{}
 
 	if left == nil && right == nil {
 		hash := sha256.Sum256(data)
@@ -38,7 +38,7 @@ func newMerkleNode(left, right *node, data []byte) *node {
 	n.left = left
 	n.right = right
 
-	return &n
+	return n
 }
 
 // buildRoot creates the root of the Merkle tree.
@@ -69,6 +69,10 @@ func (t *tree) buildRoot() *node {
 // If a data entry were to change, the result would cascade up to the root, and thus
 // the data would be invalidated.
 func newMerkleTree(data [][]byte) (*tree, error) {
+	if len(data) == 0 {
+		return nil, errors.ErrInvalidOperation("nodes could not be created")
+	}
+
 	t := &tree{
 		leaves: make([]*node, 0, len(data)),
 	}
@@ -76,10 +80,6 @@ func newMerkleTree(data [][]byte) (*tree, error) {
 	for _, h := range data {
 		n := newMerkleNode(nil, nil, h)
 		t.leaves = append(t.leaves, n)
-	}
-
-	if len(t.leaves) == 0 {
-		return nil, errors.ErrInvalidOperation("nodes could not be created")
 	}
 
 	t.root = t.buildRoot()

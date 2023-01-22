@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/rs/zerolog/log"
 	"os"
 	"time"
 )
@@ -34,6 +36,7 @@ func (b *Blockchain) Init() {
 	}
 }
 
+// AddBlock adds a new block to the blockchain.
 func (b *Blockchain) AddBlock(block Block) error {
 	if err := b.validate(block); err != nil {
 		return err
@@ -44,33 +47,90 @@ func (b *Blockchain) AddBlock(block Block) error {
 	return nil
 }
 
-func (b *Blockchain) CreateTransaction(sender string, receiver string, amount float32) error {
-	if !b.am.exists(sender) {
-
-	}
-
+// CreateTransaction creates a new transaction
+func (b *Blockchain) CreateTransaction(sender string, receiver string, signature []byte, amount float32) (Transaction, error) {
+	// check if sender exists
 	tx, err := b.am.get(sender)
 	if err != nil {
-		return err
+		return Transaction{}, err
 	}
 
-	_ = Transaction{
+	// check if sender has sufficient funds
+	if amount > tx.balance {
+		return Transaction{}, fmt.Errorf("%w: insufficient funds", errInvalidTransaction)
+	}
+
+	hash := []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount))
+
+	sigPublicKeyECDSA, _ := crypto.SigToPub(hash, signature)
+
+	sigPublicKeyBytes := crypto.FromECDSAPub(sigPublicKeyECDSA)
+
+	log.Debug().Msgf("gamming %v", sigPublicKeyBytes)
+
+	//fmt.Printf("Recovered public key: %x\n", sigPublicKeyBytes)
+
+	// derive key from signature
+
+	//genPub, err := x509.ParsePKIXPublicKey([]byte(sender))
+	//if err != nil {
+	//	return Transaction{}, err
+	//}
+
+	//key := genPub.(*ecdsa.PublicKey)
+	//key, err := crypto.SigToPub(hash, signature)
+	//if err != nil {
+	//	return Transaction{}, err
+	//}
+
+	//check if signature is valid
+	//if !ecdsa.VerifyASN1(key, []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount)), signature) {
+	//	return Transaction{}, fmt.Errorf("%w: invalid signature", errInvalidTransaction)
+	//}
+
+	// create transaction
+	t := Transaction{
 		Sender:    sender,
 		Receiver:  receiver,
-		Signature: "", // TODO
+		Signature: string(signature),
 		Amount:    amount,
 		Nonce:     tx.transactions,
 		Timestamp: time.Now().Unix(),
 	}
 
-	return nil
+	if b.mp.exists(t.string()) {
+		return Transaction{}, fmt.Errorf("%w: duplicate transaction", errInvalidTransaction)
+	}
+
+	// update the account of the sender
+	if err = b.am.update(sender, -amount); err != nil {
+		return Transaction{}, err
+	}
+
+	// update or add the account of the receiver
+	if b.am.exists(receiver) {
+		if err = b.am.update(receiver, amount); err != nil {
+			return Transaction{}, err
+		}
+	} else {
+		if err = b.am.add(receiver, amount, 0); err != nil {
+			return Transaction{}, err
+		}
+	}
+
+	// add transaction to memory pool
+	if err = b.mp.add(t); err != nil {
+		return Transaction{}, err
+	}
+
+	return t, nil
 }
 
 // TODO
 func (b *Blockchain) validate(block Block) error {
 	last := b.Blocks[len(b.Blocks)-1]
 
-	if res := bytes.Compare(last.hash(), block.PrevHash); res != 0 {
+	if res := bytes.Compare(last.hash(), []byte(block.PrevHash)); res != 0 {
 		return fmt.Errorf("%w, %s", errInvalidBlock, "hash does not match")
 	}
 
@@ -81,10 +141,16 @@ func (b *Blockchain) validate(block Block) error {
 	return nil
 }
 
-func (b *Blockchain) CreateGenesis() {
-	// FIXME
-	block, _ := CreateBlock([]Transaction{}, []byte("test"))
+// CreateGenesis creates the genesis block.
+func (b *Blockchain) CreateGenesis() error {
+	block, err := createBlock("genesis", []byte(""), []Transaction{})
+	if err != nil {
+		return err
+	}
+
 	b.Blocks = append(b.Blocks, block)
+
+	return nil
 }
 
 // FromFile returns all blocks that are written to the dumpfile.
