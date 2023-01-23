@@ -49,19 +49,41 @@ func (b *Blockchain) Init(blocks []Block) {
 }
 
 // AddBlock adds a new block to the blockchain.
-func (b *Blockchain) AddBlock(block Block) error {
+func (b *Blockchain) AddBlock(block Block) {
 	if err := b.validate(block); err != nil {
-		return err
+		log.Error().Err(err).Msg("blockchain: failed to add block")
+
+		return
 	}
 
 	b.Blocks = append(b.Blocks, block)
+}
 
-	return nil
+// CreateBlock creates a new block.
+func (b *Blockchain) CreateBlock(validator string, amount uint16) (Block, error) {
+	transactions := b.mp.retrieve(amount)
+
+	block, err := createBlock(validator, b.Blocks[len(b.Blocks)-1].hash(), transactions)
+	if err != nil {
+		log.Error().Err(err).Msg("blockchain: failed to create block")
+
+		return Block{}, err
+	}
+
+	if err = b.mp.delete(transactions...); err != nil {
+		log.Error().Err(err).Msg("blockchain: failed to delete transactions")
+
+		return Block{}, nil
+	}
+
+	return block, nil
 }
 
 // AddTransaction adds a new transaction to the memory pool.
-func (b *Blockchain) AddTransaction(transaction Transaction) error {
-	return b.mp.add(transaction)
+func (b *Blockchain) AddTransaction(transaction Transaction) {
+	if err := b.mp.add(transaction); err != nil {
+		log.Error().Err(err).Msg("blockchain: failed to add transaction")
+	}
 }
 
 // CreateTransaction creates a new transaction
@@ -143,8 +165,9 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	return t, nil
 }
 
-// TODO
+// validate validates a singular block.
 func (b *Blockchain) validate(block Block) error {
+	// FIXME
 	last := b.Blocks[len(b.Blocks)-1]
 
 	if res := bytes.Compare(last.hash(), []byte(block.PrevHash)); res != 0 {
@@ -195,12 +218,14 @@ func (b *Blockchain) FromFile() ([]Block, error) {
 		return nil, err
 	}
 
+	log.Debug().Msg("blockchain: reading from file")
+
 	return blockchain.Blocks, nil
 }
 
 // DumpJSON writes the current Blockchain to a JSON file.
 func (b *Blockchain) DumpJSON() error {
-	log.Debug().Msg("blockchain: writing dumpfile")
+	log.Debug().Msg("blockchain: writing to file")
 
 	data, err := json.MarshalIndent(b, "", " ")
 	if err != nil {

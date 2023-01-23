@@ -92,58 +92,64 @@ func (n *Network) ConnectedPeers() int {
 }
 
 // Publish publishes a Message to given Topic.
-func (n *Network) Publish(topic Topic, payload []byte) error {
+func (n *Network) Publish(topic Topic, payload []byte) {
 	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to create message")
+
+		return
 	}
 
 	if err = n.Subs[topic].Publish(msg); err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to publish message")
+
+		return
 	}
 
 	log.Debug().Str("topic", string(topic)).Msg("network: published message")
-
-	return nil
 }
 
 // Request alias for Publish to quickly make a request on a Topic.
-func (n *Network) Request(topic Topic) error {
-	if err := n.Publish(topic, []byte("request")); err != nil {
-		return err
-	}
-
-	return nil
+func (n *Network) Request(topic Topic) {
+	n.Publish(topic, []byte("request"))
 }
 
 // Reply sends a Message to one given peer.
-func (n *Network) Reply(node string, topic Topic, payload []byte) error {
+func (n *Network) Reply(node string, topic Topic, payload []byte) {
 	id, err := peer.Decode(node)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to decode peer")
+
+		return
 	}
 
 	s, err := n.Host.NewStream(n.ctx, id, "/reply")
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to create stream")
+
+		return
 	}
 
 	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to create message")
+
+		return
 	}
 
 	if _, err = s.Write(msg); err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to write message")
+
+		return
 	}
 
 	if err = s.Close(); err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to close stream")
+
+		return
 	}
 
 	log.Debug().Str("topic", string(topic)).Msg("network: sent reply")
-
-	return nil
 }
 
 // Close closes the Network.

@@ -8,7 +8,6 @@ import (
 	"syscall"
 	"time"
 
-	"backend/api"
 	"backend/blockchain"
 	"backend/errors"
 	"backend/networking"
@@ -32,7 +31,6 @@ type Node struct {
 	interval   time.Duration
 	network    *networking.Network
 	blockchain *blockchain.Blockchain
-	api        *api.API
 	wg         sync.WaitGroup
 	ready      chan struct{}
 	close      chan struct{}
@@ -55,7 +53,6 @@ func NewNode(config Configuration) (*Node, error) {
 		interval:   interval,
 		network:    net,
 		blockchain: blockchain.NewBlockchain(),
-		api:        api.NewAPI(config.APIPort),
 		ready:      make(chan struct{}),
 		close:      make(chan struct{}),
 	}, nil
@@ -85,9 +82,6 @@ func (n *Node) Run() {
 		log.Fatal().Err(err).Msg("node: failed to start scheduler")
 	}
 
-	// start HTTP API
-	n.api.Start()
-
 	// node done provisioning; set uptime for node
 	n.Uptime = time.Now()
 }
@@ -97,10 +91,6 @@ func (n *Node) Run() {
 // will be written to the host.
 func (n *Node) Stop() {
 	close(n.close)
-
-	if err := n.api.Stop(); err != nil {
-		log.Error().Err(err).Msg("node: failed to stop the API")
-	}
 
 	if err := n.network.Close(); err != nil {
 		log.Error().Err(err).Msg("node: failed to close network")
@@ -168,9 +158,7 @@ func (n *Node) setup() {
 	// get blocks from peers
 	time.AfterFunc(time.Second, func() {
 		if n.network.ConnectedPeers() > 0 {
-			if err := n.network.Request(networking.Blockchain); err != nil {
-				log.Error().Err(err).Msg("node: failed to request blockchain from peers")
-			}
+			n.network.Request(networking.Blockchain)
 		}
 	})
 
@@ -210,8 +198,6 @@ func (n *Node) setup() {
 // schedule starts an internal ticker with given interval.
 // each interval an attempt will be made to forge a new block on the blockchain.
 func (n *Node) schedule(interval time.Duration) error {
-	log.Debug().Msg("node: scheduler starting")
-
 	if interval == 0 {
 		return errors.ErrInvalidArgument("interval can only be non-zero")
 	}
@@ -237,23 +223,19 @@ func (n *Node) schedule(interval time.Duration) error {
 		}
 	}()
 
-	log.Debug().Msg("node: scheduler running")
+	log.Debug().Msg("node: scheduler started")
 
 	return nil
 }
 
 // reply sends a reply to another node using the network's Reply method.
 func (n *Node) reply(peer string, topic networking.Topic, payload []byte) {
-	if err := n.network.Reply(peer, topic, payload); err != nil {
-		log.Error().Err(err).Msg("node: failed to send reply")
-	}
+	n.network.Reply(peer, topic, payload)
 }
 
 // listen listens to incoming traffic from all nodes that this Node is connected to.
 func (n *Node) listen() {
 	n.wg.Add(1)
-
-	log.Debug().Msg("node: listener starting")
 
 	net := n.network
 
@@ -269,17 +251,13 @@ func (n *Node) listen() {
 
 				util.UnmarshalType(msg.Payload, &t)
 
-				if err := n.blockchain.AddTransaction(t); err != nil {
-					log.Error().Err(err).Msg("node: failed to add transaction")
-				}
+				n.blockchain.AddTransaction(t)
 			case msg := <-net.Subs[networking.Block].Messages:
 				var b blockchain.Block
 
 				util.UnmarshalType(msg.Payload, &b)
 
-				if err := n.blockchain.AddBlock(b); err != nil {
-					log.Error().Err(err).Msg("node: failed to add block")
-				}
+				n.blockchain.AddBlock(b)
 			case msg := <-net.Subs[networking.Blockchain].Messages:
 				if len(n.blockchain.Blocks) > 0 {
 					n.reply(msg.Peer, networking.Blockchain, util.MarshalType(n.blockchain))
@@ -288,7 +266,7 @@ func (n *Node) listen() {
 		}
 	}()
 
-	log.Debug().Msg("node: listener running")
+	log.Debug().Msg("node: listener started")
 }
 
 // HandleSigterm executes when termination from operating system is received.

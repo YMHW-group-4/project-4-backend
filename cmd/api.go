@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"context"
@@ -7,54 +7,61 @@ import (
 	"net/http"
 	"sync"
 
-	"backend/api/endpoints"
+	"backend/api"
 
 	"github.com/rs/zerolog/log"
 )
+
+// API needs Node; main cannot be shared, thus refactoring needs to be done.
+// Moving the API here until rewrite.
+// Spoiler: refactoring will not be done.
 
 // API represents the HTTP API.
 type API struct {
 	server *http.Server
 	wg     sync.WaitGroup
+	node   *Node
 }
 
 // NewAPI creates a new HTTP API.
-func NewAPI(port int) *API {
+func NewAPI(port int, node *Node) *API {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/transaction", endpoints.Transaction)
-	mux.HandleFunc("/wallet", endpoints.Wallet)
+	// TODO refactor this
+	mux.HandleFunc("/transaction", api.Transaction)
+	mux.HandleFunc("/wallet", api.Wallet)
 
 	return &API{
 		server: &http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: mux,
 		},
+		node: node,
 	}
 }
 
 // Stop stops the API.
-func (a *API) Stop() error {
+func (a *API) Stop() {
+	log.Info().Msg("api: shutting down")
+
 	ctx := context.Background()
 
 	defer ctx.Done()
 
 	if err := a.server.Shutdown(ctx); err != nil {
-		return err
+		log.Error().Err(err).Msg("api: failed to shutdown")
 	}
 
 	a.wg.Wait()
 
-	log.Debug().Msg("api: terminated")
-
-	return nil
+	log.Info().Msg("api: terminated")
 }
 
 // Start starts the API.
 func (a *API) Start() {
-	a.wg.Add(1)
+	log.Info().Msg("api: starting")
 
-	log.Debug().Msg("api: starting")
+	a.wg.Add(1)
 
 	go func() {
 		defer a.wg.Done()
@@ -64,5 +71,5 @@ func (a *API) Start() {
 		}
 	}()
 
-	log.Debug().Msg("api: running")
+	log.Info().Msg("api: running")
 }
