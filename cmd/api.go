@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"sync"
 
-	"backend/api"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -28,8 +26,7 @@ func NewAPI(port int, node *Node) *API {
 	mux := http.NewServeMux()
 
 	// TODO refactor this
-	mux.HandleFunc("/transaction", api.Transaction)
-	mux.HandleFunc("/wallet", api.Wallet)
+	mux.HandleFunc("/transaction", Transaction)
 
 	return &API{
 		server: &http.Server{
@@ -72,4 +69,8 @@ func (a *API) Start() {
 	}()
 
 	log.Info().Msg("api: running")
+}
+
+func Transaction(w http.ResponseWriter, req *http.Request) {
+
 }
