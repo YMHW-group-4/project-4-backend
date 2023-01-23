@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/zerolog/log"
+	"math"
 	"os"
 	"time"
+
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/rs/zerolog/log"
 )
 
 // dumpFile the file name to whom the Blockchain should be written.
@@ -29,8 +31,18 @@ func NewBlockchain() *Blockchain {
 	}
 }
 
-// Init initializes the account model of the Blockchain.
-func (b *Blockchain) Init() {
+// Init initializes the blockchain and its account model.
+func (b *Blockchain) Init(blocks []Block) {
+	if len(blocks) > 0 {
+		b.Blocks = blocks
+	} else {
+		if err := b.createGenesis(); err != nil {
+			log.Fatal().Err(err).Msg("blockchain: failed to create genesis")
+		}
+	}
+
+	log.Debug().Msg("blockchain: initializing account model")
+
 	if len(b.Blocks) > 0 {
 		b.am.fromBlocks(b.Blocks...)
 	}
@@ -45,6 +57,11 @@ func (b *Blockchain) AddBlock(block Block) error {
 	b.Blocks = append(b.Blocks, block)
 
 	return nil
+}
+
+// AddTransaction adds a new transaction to the memory pool.
+func (b *Blockchain) AddTransaction(transaction Transaction) error {
+	return b.mp.add(transaction)
 }
 
 // CreateTransaction creates a new transaction
@@ -141,9 +158,20 @@ func (b *Blockchain) validate(block Block) error {
 	return nil
 }
 
-// CreateGenesis creates the genesis block.
-func (b *Blockchain) CreateGenesis() error {
-	block, err := createBlock("genesis", []byte(""), []Transaction{})
+// createGenesis creates the genesis block.
+func (b *Blockchain) createGenesis() error {
+	log.Debug().Msg("blockchain: creating genesis block")
+
+	t := Transaction{
+		Sender:    "",
+		Receiver:  "genesis",
+		Signature: "",
+		Amount:    math.MaxFloat32,
+		Nonce:     0,
+		Timestamp: time.Now().Unix(),
+	}
+
+	block, err := createBlock("genesis", []byte(""), []Transaction{t})
 	if err != nil {
 		return err
 	}
@@ -172,6 +200,8 @@ func (b *Blockchain) FromFile() ([]Block, error) {
 
 // DumpJSON writes the current Blockchain to a JSON file.
 func (b *Blockchain) DumpJSON() error {
+	log.Debug().Msg("blockchain: writing dumpfile")
+
 	data, err := json.MarshalIndent(b, "", " ")
 	if err != nil {
 		return err

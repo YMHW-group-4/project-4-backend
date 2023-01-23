@@ -36,7 +36,6 @@ type Node struct {
 	wg         sync.WaitGroup
 	ready      chan struct{}
 	close      chan struct{}
-	ch         chan []blockchain.Block
 }
 
 // NewNode creates a new Node with given configuration.
@@ -59,7 +58,6 @@ func NewNode(config Configuration) (*Node, error) {
 		api:        api.NewAPI(config.APIPort),
 		ready:      make(chan struct{}),
 		close:      make(chan struct{}),
-		ch:         make(chan []blockchain.Block),
 	}, nil
 }
 
@@ -79,13 +77,13 @@ func (n *Node) Run() {
 	// wait for ready signal from setup
 	<-n.ready
 
+	// start listener for incoming requests
+	n.listen()
+
 	// start the scheduler
 	if err := n.schedule(n.interval); err != nil {
 		log.Fatal().Err(err).Msg("node: failed to start scheduler")
 	}
-
-	// start listener for incoming requests
-	n.listen()
 
 	// start HTTP API
 	n.api.Start()
@@ -99,6 +97,10 @@ func (n *Node) Run() {
 // will be written to the host.
 func (n *Node) Stop() {
 	close(n.close)
+
+	if err := n.api.Stop(); err != nil {
+		log.Error().Err(err).Msg("node: failed to stop the API")
+	}
 
 	if err := n.network.Close(); err != nil {
 		log.Error().Err(err).Msg("node: failed to close network")
@@ -125,17 +127,19 @@ func (n *Node) setStreamHandlers() {
 
 		util.UnmarshalType(msg, &message)
 
+		log.Debug().Str("topic", string(message.Topic)).Msg("network: received reply")
+
 		switch message.Topic {
 		case networking.Blockchain:
 			var b blockchain.Blockchain
 
 			util.UnmarshalType(message.Payload, &b)
 
-			if len(b.Blocks) != 0 {
-				n.ch <- b.Blocks
+			if len(b.Blocks) > 0 {
+				blocks = append(blocks, b.Blocks)
 			}
 		case networking.Consensus:
-			// do something
+			// TODO
 		case networking.Block, networking.Transaction:
 		}
 	})
@@ -150,6 +154,10 @@ func (n *Node) setStreamHandlers() {
 // The Node will be blocked from execution until a signal is given that the setup has been
 // successfully completed.
 func (n *Node) setup() {
+	log.Info().
+		Int("node(s)", n.network.ConnectedPeers()).
+		Msg("node: synchronizing")
+
 	// get blocks from file
 	if data, err := n.blockchain.FromFile(); err == nil {
 		if len(data) != 0 {
@@ -157,46 +165,38 @@ func (n *Node) setup() {
 		}
 	}
 
-	n.wg.Add(1)
-
-	go func() {
-		ticker := time.NewTicker(time.Second)
-
-		defer n.wg.Done()
-
-		select {
-		case <-ticker.C:
-		case <-n.network.Notify():
+	// get blocks from peers
+	time.AfterFunc(time.Second, func() {
+		if n.network.ConnectedPeers() > 0 {
 			if err := n.network.Request(networking.Blockchain); err != nil {
 				log.Error().Err(err).Msg("node: failed to request blockchain from peers")
 			}
 		}
+	})
 
-		log.Info().
-			Int("node(s)", n.network.ConnectedPeers()).
-			Msg("node: synchronizing")
+	n.wg.Add(1)
 
-		<-ticker.C
+	// wait for replies
+	// TODO change to other duration?
+	time.AfterFunc(5*time.Second, func() {
+		defer n.wg.Done()
 
-		ticker.Stop()
+		b := make([]blockchain.Block, 0)
 
-		if len(blocks) != 0 {
-			for b := range blocks {
-				// TODO do something here
-				log.Trace().Msgf("%v", b)
-			}
-		} else {
-			if err := n.blockchain.CreateGenesis(); err != nil {
-				log.Fatal().Err(err).Msg("node: failed to create genesis block")
+		if len(blocks) > 0 {
+			for _, data := range blocks {
+				if len(data) > len(b) {
+					b = data
+				}
 			}
 		}
 
+		// initialize blockchain
+		n.blockchain.Init(b)
+
+		// reset blocks
 		blocks = nil
-
-		close(n.ch)
-
-		n.blockchain.Init()
-	}()
+	})
 
 	n.wg.Wait()
 
@@ -210,6 +210,8 @@ func (n *Node) setup() {
 // schedule starts an internal ticker with given interval.
 // each interval an attempt will be made to forge a new block on the blockchain.
 func (n *Node) schedule(interval time.Duration) error {
+	log.Debug().Msg("node: scheduler starting")
+
 	if interval == 0 {
 		return errors.ErrInvalidArgument("interval can only be non-zero")
 	}
@@ -224,6 +226,7 @@ func (n *Node) schedule(interval time.Duration) error {
 		for {
 			select {
 			case <-ticker.C:
+
 				// TODO create new Block
 				// Proof of stake
 			case <-n.close:
@@ -233,6 +236,8 @@ func (n *Node) schedule(interval time.Duration) error {
 			}
 		}
 	}()
+
+	log.Debug().Msg("node: scheduler running")
 
 	return nil
 }
@@ -248,6 +253,8 @@ func (n *Node) reply(peer string, topic networking.Topic, payload []byte) {
 func (n *Node) listen() {
 	n.wg.Add(1)
 
+	log.Debug().Msg("node: listener starting")
+
 	net := n.network
 
 	go func() {
@@ -257,15 +264,31 @@ func (n *Node) listen() {
 			select {
 			case <-n.close:
 				return
-			case _ = <-net.Subs[networking.Transaction].Messages:
-				// do something
-			case _ = <-net.Subs[networking.Block].Messages:
-				// do something
+			case msg := <-net.Subs[networking.Transaction].Messages:
+				var t blockchain.Transaction
+
+				util.UnmarshalType(msg.Payload, &t)
+
+				if err := n.blockchain.AddTransaction(t); err != nil {
+					log.Error().Err(err).Msg("node: failed to add transaction")
+				}
+			case msg := <-net.Subs[networking.Block].Messages:
+				var b blockchain.Block
+
+				util.UnmarshalType(msg.Payload, &b)
+
+				if err := n.blockchain.AddBlock(b); err != nil {
+					log.Error().Err(err).Msg("node: failed to add block")
+				}
 			case msg := <-net.Subs[networking.Blockchain].Messages:
-				n.reply(msg.Peer, networking.Blockchain, util.MarshalType(n.blockchain))
+				if len(n.blockchain.Blocks) > 0 {
+					n.reply(msg.Peer, networking.Blockchain, util.MarshalType(n.blockchain))
+				}
 			}
 		}
 	}()
+
+	log.Debug().Msg("node: listener running")
 }
 
 // HandleSigterm executes when termination from operating system is received.

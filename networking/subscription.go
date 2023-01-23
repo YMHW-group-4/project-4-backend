@@ -7,6 +7,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/rs/zerolog/log"
 )
 
 // source: https://medium.com/rahasak/libp2p-pubsub-peer-discovery-with-kademlia-dht-c8b131550ac7
@@ -113,6 +114,8 @@ func (subscription *Subscription) listen() {
 
 				if err := json.Unmarshal(msg.Data, &message); err == nil {
 					subscription.Messages <- message
+
+					log.Debug().Str("topic", subscription.top.String()).Msg("network: received message")
 				}
 			}
 		}

@@ -38,5 +38,4 @@ func (suite *BlockchainTestSuite) TestBlockchainCreateTransaction() {
 	log.Debug().Err(err).Send()
 
 	log.Debug().Msgf("%v", pub)
-
 }

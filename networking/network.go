@@ -23,18 +23,17 @@ const discoveryServiceTag = "crypto"
 
 // discoveryNotifee gets notified when a new peer is discovered via mDNS.
 type discoveryNotifee struct {
-	host *Network
+	host host.Host
 }
 
 // Network represents a peer-to-peer network.
 type Network struct {
-	Host   host.Host
-	Subs   map[Topic]*Subscription
-	ctx    context.Context
-	ps     *pubsub.PubSub
-	wg     sync.WaitGroup
-	close  chan struct{}
-	notify chan struct{}
+	Host  host.Host
+	Subs  map[Topic]*Subscription
+	ctx   context.Context
+	ps    *pubsub.PubSub
+	wg    sync.WaitGroup
+	close chan struct{}
 }
 
 // NewNetwork creates a new Network with given port.
@@ -61,18 +60,19 @@ func NewNetwork(port int) (*Network, error) {
 	}
 
 	return &Network{
-		Host:   h,
-		Subs:   make(map[Topic]*Subscription, 0),
-		ctx:    ctx,
-		ps:     ps,
-		wg:     sync.WaitGroup{},
-		close:  make(chan struct{}),
-		notify: make(chan struct{}),
+		Host:  h,
+		Subs:  make(map[Topic]*Subscription, 0),
+		ctx:   ctx,
+		ps:    ps,
+		wg:    sync.WaitGroup{},
+		close: make(chan struct{}),
 	}, nil
 }
 
 // Start starts the Network.
 func (n *Network) Start() error {
+	log.Debug().Msg("network: starting")
+
 	if err := n.setupSubscriptions(); err != nil {
 		return err
 	}
@@ -80,6 +80,8 @@ func (n *Network) Start() error {
 	if err := n.startMdns(); err != nil {
 		return err
 	}
+
+	log.Debug().Msg("network: running")
 
 	return nil
 }
@@ -99,6 +101,8 @@ func (n *Network) Publish(topic Topic, payload []byte) error {
 	if err = n.Subs[topic].Publish(msg); err != nil {
 		return err
 	}
+
+	log.Debug().Str("topic", string(topic)).Msg("network: published message")
 
 	return nil
 }
@@ -137,6 +141,8 @@ func (n *Network) Reply(node string, topic Topic, payload []byte) error {
 		return err
 	}
 
+	log.Debug().Str("topic", string(topic)).Msg("network: sent reply")
+
 	return nil
 }
 
@@ -156,13 +162,15 @@ func (n *Network) Close() error {
 
 	n.wg.Wait()
 
+	log.Debug().Msg("network: terminated")
+
 	return nil
 }
 
 // startMdns creates and starts a new mDNS service.
 // This automatically discovers peers on the same LAN and connects to them.
 func (n *Network) startMdns() error {
-	s := mdns.NewMdnsService(n.Host, discoveryServiceTag, &discoveryNotifee{host: n})
+	s := mdns.NewMdnsService(n.Host, discoveryServiceTag, &discoveryNotifee{host: n.Host})
 
 	return s.Start()
 }
@@ -181,21 +189,14 @@ func (n *Network) setupSubscriptions() error {
 	return nil
 }
 
-// Notify blocks until a peer has connected to the host.
-func (n *Network) Notify() <-chan struct{} {
-	return n.notify
-}
-
 // HandlePeerFound gets called when a new peer is discovered.
 // This will automatically connect with the discovered peer.
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	if err := n.host.Host.Connect(context.Background(), pi); err != nil {
+	if err := n.host.Connect(context.Background(), pi); err != nil {
 		log.Error().Err(err).Msg("network: failed to connect to peer")
 	}
 
-	log.Debug().Msg("network: connected to peer")
-
-	n.host.notify <- struct{}{}
+	log.Debug().Str("peer", pi.ID.String()).Msg("network: new connection")
 }
 
 // hostAddr makes address on given input ports for IPv4 and IPv6.

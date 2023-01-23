@@ -45,6 +45,8 @@ func (a *API) Stop() error {
 
 	a.wg.Wait()
 
+	log.Debug().Msg("api: terminated")
+
 	return nil
 }
 
@@ -52,11 +54,15 @@ func (a *API) Stop() error {
 func (a *API) Start() {
 	a.wg.Add(1)
 
+	log.Debug().Msg("api: starting")
+
 	go func() {
 		defer a.wg.Done()
 
 		if err := a.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Error().Err(err).Msg("API: failed to serve")
+			log.Fatal().Err(err).Msg("api: failed to serve")
 		}
 	}()
+
+	log.Debug().Msg("api: running")
 }
