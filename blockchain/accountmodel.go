@@ -110,6 +110,10 @@ func (am *accountModel) add(key string, balance float32, transactions uint32) er
 		return errors.ErrInvalidOperation("key already exists")
 	}
 
+	if len(key) == 0 {
+		return errors.ErrInvalidOperation("empty key")
+	}
+
 	// this should not happen
 	if 0 > balance {
 		return errors.ErrInvalidOperation("balance cannot be negative")
@@ -130,6 +134,10 @@ func (am *accountModel) add(key string, balance float32, transactions uint32) er
 func (am *accountModel) update(key string, amount float32) error {
 	if !am.exists(key) {
 		return errors.ErrInvalidOperation("key does not exist")
+	}
+
+	if len(key) == 0 {
+		return errors.ErrInvalidOperation("empty key")
 	}
 
 	// this should not happen

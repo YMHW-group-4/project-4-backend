@@ -13,22 +13,28 @@ var errInvalidBlock = errors.New("invalid block")
 // Block represents a singular block of the blockchain.
 type Block struct {
 	Validator    string        `json:"validator"`
-	MerkleRoot   []byte        `json:"merkleRoot"`
-	PrevHash     []byte        `json:"prevHash"`
+	MerkleRoot   string        `json:"merkleRoot"`
+	PrevHash     string        `json:"prevHash"`
 	Height       int           `json:"height"`
 	Timestamp    int64         `json:"timestamp"`
 	Transactions []Transaction `json:"transactions"`
 }
 
-func CreateBlock(transactions []Transaction, prevHash []byte) (Block, error) {
+// createBlock creates a new block.
+func createBlock(validator string, prevHash []byte, transactions []Transaction) (Block, error) {
+	if len(transactions) == 0 {
+		return Block{}, fmt.Errorf("%w: zero transactions", errInvalidBlock)
+	}
+
 	t, err := newMerkleTree(hashTransactions(transactions))
 	if err != nil {
 		return Block{}, err
 	}
 
 	return Block{
-		MerkleRoot:   t.root.hash,
-		PrevHash:     prevHash,
+		Validator:    validator,
+		MerkleRoot:   string(t.root.hash),
+		PrevHash:     string(prevHash),
 		Height:       len(transactions),
 		Timestamp:    time.Now().Unix(),
 		Transactions: transactions,

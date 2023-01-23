@@ -6,5 +6,6 @@ services:
     environment:
       PORT: 30333
       DEBUG: false
+      API_PORT: 8080
     deploy:
       replicas: 16

@@ -65,12 +65,14 @@ func NewNetwork(port int) (*Network, error) {
 		ctx:   ctx,
 		ps:    ps,
 		wg:    sync.WaitGroup{},
-		close: make(chan struct{}, 0),
+		close: make(chan struct{}),
 	}, nil
 }
 
 // Start starts the Network.
 func (n *Network) Start() error {
+	log.Debug().Msg("network: starting")
+
 	if err := n.setupSubscriptions(); err != nil {
 		return err
 	}
@@ -78,6 +80,8 @@ func (n *Network) Start() error {
 	if err := n.startMdns(); err != nil {
 		return err
 	}
+
+	log.Debug().Msg("network: running")
 
 	return nil
 }
@@ -88,54 +92,64 @@ func (n *Network) ConnectedPeers() int {
 }
 
 // Publish publishes a Message to given Topic.
-func (n *Network) Publish(topic Topic, payload []byte) error {
+func (n *Network) Publish(topic Topic, payload []byte) {
 	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to create message")
+
+		return
 	}
 
 	if err = n.Subs[topic].Publish(msg); err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to publish message")
+
+		return
 	}
 
-	return nil
+	log.Debug().Str("topic", string(topic)).Msg("network: published message")
 }
 
 // Request alias for Publish to quickly make a request on a Topic.
-func (n *Network) Request(topic Topic) error {
-	if err := n.Publish(topic, []byte("request")); err != nil {
-		return err
-	}
-
-	return nil
+func (n *Network) Request(topic Topic) {
+	n.Publish(topic, []byte("request"))
 }
 
 // Reply sends a Message to one given peer.
-func (n *Network) Reply(node string, topic Topic, payload []byte) error {
+func (n *Network) Reply(node string, topic Topic, payload []byte) {
 	id, err := peer.Decode(node)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to decode peer")
+
+		return
 	}
 
 	s, err := n.Host.NewStream(n.ctx, id, "/reply")
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to create stream")
+
+		return
 	}
 
 	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to create message")
+
+		return
 	}
 
 	if _, err = s.Write(msg); err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to write message")
+
+		return
 	}
 
 	if err = s.Close(); err != nil {
-		return err
+		log.Error().Err(err).Msg("network: failed to close stream")
+
+		return
 	}
 
-	return nil
+	log.Debug().Str("topic", string(topic)).Msg("network: sent reply")
 }
 
 // Close closes the Network.
@@ -153,6 +167,8 @@ func (n *Network) Close() error {
 	}
 
 	n.wg.Wait()
+
+	log.Debug().Msg("network: terminated")
 
 	return nil
 }
@@ -186,9 +202,7 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 		log.Error().Err(err).Msg("network: failed to connect to peer")
 	}
 
-	log.Debug().
-		Int("peer(s)", len(n.host.Network().Peers())).
-		Msg("network: discovered peer")
+	log.Debug().Str("peer", pi.ID.String()).Msg("network: new connection")
 }
 
 // hostAddr makes address on given input ports for IPv4 and IPv6.

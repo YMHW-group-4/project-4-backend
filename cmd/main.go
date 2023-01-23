@@ -49,11 +49,17 @@ func main() {
 		log.Fatal().Err(err).Msg("node: failed to create node")
 	}
 
+	api := NewAPI(config.APIPort, node)
+
 	node.Run()
 
 	log.Info().
 		TimeDiff("startup", node.Uptime, startup).
 		Msg("node: running")
 
+	api.Start()
+
 	node.HandleSigterm()
+
+	api.Stop()
 }
