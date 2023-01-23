@@ -36,7 +36,7 @@ func NewAPI(port int, node *Node) *API {
 		node: node,
 	}
 }
-tus
+
 // Stop stops the API.
 func (a *API) Stop() {
 	log.Info().Msg("api: shutting down")
