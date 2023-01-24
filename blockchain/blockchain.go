@@ -83,6 +83,22 @@ func (b *Blockchain) CreateBlock(validator string, amount uint16) (Block, error)
 func (b *Blockchain) AddTransaction(transaction Transaction) {
 	if err := b.mp.add(transaction); err != nil {
 		log.Error().Err(err).Msg("blockchain: failed to add transaction")
+
+		return
+	}
+
+	// update the account of the sender
+	if err := b.am.update(transaction.Sender, -transaction.Amount); err != nil {
+		log.Error().Err(err).Msg("blockchain: failed to update account model")
+	}
+
+	// update or add the account of the receiver
+	if b.am.exists(transaction.Receiver) {
+		if err := b.am.update(transaction.Receiver, transaction.Amount); err != nil {
+		}
+	} else {
+		if err := b.am.add(transaction.Receiver, transaction.Amount, 0); err != nil {
+		}
 	}
 }
 
