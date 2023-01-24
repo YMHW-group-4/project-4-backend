@@ -44,14 +44,14 @@ func main() {
 		Bool("debug", config.Debug).
 		Msg("node: startup")
 
-	node, err := NewNode(config)
+	n, err := NewNode(config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("node: failed to create node")
 	}
 
-	api := NewAPI(config.APIPort, node)
+	api := NewAPI(config.APIPort, n)
 
-	node.Run()
+	n.Run()
 
 	log.Info().
 		TimeDiff("startup", node.Uptime, startup).
@@ -59,7 +59,7 @@ func main() {
 
 	api.Start()
 
-	node.HandleSigterm()
+	n.HandleSigterm()
 
 	api.Stop()
 }

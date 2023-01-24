@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"github.com/mr-tron/base58"
 )
 
 // MarshalType alias for json.Marshal.
@@ -22,4 +23,15 @@ func UnmarshalType(data []byte, v any) any {
 	}
 
 	return v
+}
+
+func Base58Encode(input []byte) []byte {
+	encode := base58.Encode(input)
+
+	return []byte(encode)
+}
+
+func Base58Decode(input []byte) []byte {
+	decode, _ := base58.Decode(string(input[:]))
+	return decode
 }
