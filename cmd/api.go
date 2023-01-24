@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var node *Node
+
 // API needs Node; main cannot be shared, thus refactoring needs to be done.
 // Moving the API here until rewrite.
 // Spoiler: refactoring will not be done.
@@ -18,22 +20,21 @@ import (
 type API struct {
 	server *http.Server
 	wg     sync.WaitGroup
-	node   *Node
 }
 
 // NewAPI creates a new HTTP API.
-func NewAPI(port int, node *Node) *API {
+func NewAPI(port int, n *Node) *API {
 	mux := http.NewServeMux()
 
-	// TODO refactor this
 	mux.HandleFunc("/transaction", Transaction)
+
+	node = n
 
 	return &API{
 		server: &http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: mux,
 		},
-		node: node,
 	}
 }
 
@@ -72,5 +73,6 @@ func (a *API) Start() {
 }
 
 func Transaction(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "%s", node.Uptime)
 
 }
