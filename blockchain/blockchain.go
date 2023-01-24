@@ -26,8 +26,8 @@ type Blockchain struct {
 func NewBlockchain() *Blockchain {
 	return &Blockchain{
 		Blocks: make([]Block, 0),
-		mp:     newMempool(),
 		am:     newAccountModel(),
+		mp:     newMempool(),
 	}
 }
 
@@ -95,7 +95,7 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	}
 
 	// check if sender has sufficient funds
-	if amount > tx.balance {
+	if amount > tx.Balance {
 		return Transaction{}, fmt.Errorf("%w: insufficient funds", errInvalidTransaction)
 	}
 
@@ -133,7 +133,7 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 		Receiver:  receiver,
 		Signature: string(signature),
 		Amount:    amount,
-		Nonce:     tx.transactions,
+		Nonce:     tx.Transactions,
 		Timestamp: time.Now().Unix(),
 	}
 
@@ -221,6 +221,11 @@ func (b *Blockchain) FromFile() ([]Block, error) {
 	log.Debug().Msg("blockchain: reading from file")
 
 	return blockchain.Blocks, nil
+}
+
+// GetAccount returns the account associated with the given key.
+func (b *Blockchain) GetAccount(key string) (*Account, error) {
+	return b.am.get(key)
 }
 
 // DumpJSON writes the current Blockchain to a JSON file.

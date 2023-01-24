@@ -6,23 +6,23 @@ import (
 	"backend/errors"
 )
 
-// account represents an account within the accountModel.
+// Account represents an account within the accountModel.
 // It holds the balance and the number of transactions done by the account.
-type account struct {
-	balance      float32
-	transactions uint32
+type Account struct {
+	Balance      float32
+	Transactions uint32
 }
 
 // accountModel holds the accounts of all keys.
 type accountModel struct {
 	sync.RWMutex
-	accounts map[string]*account
+	accounts map[string]*Account
 }
 
 // newAccountModel creates a new accountModel.
 func newAccountModel() *accountModel {
 	return &accountModel{
-		accounts: make(map[string]*account),
+		accounts: make(map[string]*Account),
 	}
 }
 
@@ -46,24 +46,24 @@ func (am *accountModel) fromBlocks(block ...Block) {
 				rx := am.accounts[transaction.Receiver]
 
 				if tx != nil {
-					tx.balance -= transaction.Amount
-					tx.transactions++
+					tx.Balance -= transaction.Amount
+					tx.Transactions++
 				} else {
 					// this should not happen.
 					// sender should always exist; default balance is zero.
 					// transaction should be verified before its being forged into a block.
-					am.accounts[transaction.Sender] = &account{
-						balance:      0,
-						transactions: 1,
+					am.accounts[transaction.Sender] = &Account{
+						Balance:      0,
+						Transactions: 1,
 					}
 				}
 
 				if rx != nil {
-					rx.balance += transaction.Amount
+					rx.Balance += transaction.Amount
 				} else {
-					am.accounts[transaction.Receiver] = &account{
-						balance:      transaction.Amount,
-						transactions: 0,
+					am.accounts[transaction.Receiver] = &Account{
+						Balance:      transaction.Amount,
+						Transactions: 0,
 					}
 				}
 
@@ -78,12 +78,12 @@ func (am *accountModel) fromBlocks(block ...Block) {
 // clear clears the accountModel.
 func (am *accountModel) clear() {
 	if len(am.accounts) > 0 {
-		am.accounts = make(map[string]*account)
+		am.accounts = make(map[string]*Account)
 	}
 }
 
 // get returns the account associated with given key.
-func (am *accountModel) get(key string) (*account, error) {
+func (am *accountModel) get(key string) (*Account, error) {
 	if !am.exists(key) {
 		return nil, errors.ErrInvalidOperation("key does not exist")
 	}
@@ -122,9 +122,9 @@ func (am *accountModel) add(key string, balance float32, transactions uint32) er
 	am.Lock()
 	defer am.Unlock()
 
-	am.accounts[key] = &account{
-		balance:      balance,
-		transactions: transactions,
+	am.accounts[key] = &Account{
+		Balance:      balance,
+		Transactions: transactions,
 	}
 
 	return nil
@@ -141,15 +141,15 @@ func (am *accountModel) update(key string, amount float32) error {
 	}
 
 	// this should not happen
-	if 0 > (am.accounts[key].balance + amount) {
+	if 0 > (am.accounts[key].Balance + amount) {
 		return errors.ErrInvalidOperation("balance cannot be negative")
 	}
 
 	am.Lock()
 	defer am.Unlock()
 
-	am.accounts[key].balance += amount
-	am.accounts[key].transactions++
+	am.accounts[key].Balance += amount
+	am.accounts[key].Transactions++
 
 	return nil
 }
