@@ -32,9 +32,9 @@ func TestAccountModelFromBlock(t *testing.T) {
 
 	am.fromBlocks(blocks...)
 
-	e := &account{
-		balance:      0,
-		transactions: 10000,
+	e := &Account{
+		Balance:      0,
+		Transactions: 10000,
 	}
 
 	assert.Equal(t, e, am.accounts["genesis"])
