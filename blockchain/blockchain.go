@@ -1,7 +1,7 @@
 package blockchain
 
 import (
-	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -123,7 +123,7 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	t := Transaction{
 		Sender:    sender,
 		Receiver:  receiver,
-		Signature: signature,
+		Signature: hex.EncodeToString(signature),
 		Amount:    amount,
 		Nonce:     tx.Transactions,
 		Timestamp: time.Now().Unix(),
@@ -162,7 +162,7 @@ func (b *Blockchain) validate(block Block, validator string) error {
 	last := b.Blocks[len(b.Blocks)-1]
 
 	// compare hashes
-	if res := bytes.Compare(last.hash(), block.PrevHash); res != 0 {
+	if hex.EncodeToString(last.hash()) != block.PrevHash {
 		return fmt.Errorf("%w, %s", errInvalidBlock, "hash does not match")
 	}
 
@@ -186,7 +186,7 @@ func (b *Blockchain) createGenesis() error {
 	t := Transaction{
 		Sender:    "",
 		Receiver:  "genesis",
-		Signature: []byte(""),
+		Signature: "",
 		Amount:    math.MaxUint64,
 		Nonce:     0,
 		Timestamp: time.Now().Unix(),

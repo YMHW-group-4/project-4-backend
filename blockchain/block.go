@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -13,14 +14,14 @@ var errInvalidBlock = errors.New("invalid block")
 // Block represents a singular block of the blockchain.
 type Block struct {
 	Validator    string        `json:"validator"`
-	MerkleRoot   []byte        `json:"merkleRoot"`
-	PrevHash     []byte        `json:"prevHash"`
+	MerkleRoot   string        `json:"merkleRoot"`
+	PrevHash     string        `json:"prevHash"`
 	Height       uint64        `json:"height"`
 	Timestamp    int64         `json:"timestamp"`
 	Transactions []Transaction `json:"transactions"`
 }
 
-// createBlock creates a new block.
+// createBlock creates a new Block.
 func createBlock(validator string, prevHash []byte, transactions []Transaction) (Block, error) {
 	if len(transactions) == 0 {
 		return Block{}, fmt.Errorf("%w: zero transactions", errInvalidBlock)
@@ -33,8 +34,8 @@ func createBlock(validator string, prevHash []byte, transactions []Transaction) 
 
 	return Block{
 		Validator:    validator,
-		MerkleRoot:   t.root.hash,
-		PrevHash:     prevHash,
+		MerkleRoot:   hex.EncodeToString(t.root.hash),
+		PrevHash:     hex.EncodeToString(prevHash),
 		Height:       uint64(len(transactions)),
 		Timestamp:    time.Now().Unix(),
 		Transactions: transactions,

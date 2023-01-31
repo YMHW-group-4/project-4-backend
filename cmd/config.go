@@ -12,6 +12,7 @@ type Configuration struct {
 	Port     int
 	APIPort  int
 	Interval string
+	Seed     string
 }
 
 // getConfigFromEnv retrieves configuration from the environment, if environment
@@ -28,5 +29,6 @@ func getConfigFromEnv() Configuration {
 		Port:     util.GetEnv("PORT", 30333),    //nolint
 		APIPort:  util.GetEnv("API_PORT", 8080), //nolint
 		Interval: interval,
+		Seed:     util.GetEnv("DNS_SEED", ""),
 	}
 }
