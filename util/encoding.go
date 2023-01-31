@@ -32,6 +32,7 @@ func Base58Encode(input []byte) []byte {
 }
 
 func Base58Decode(input []byte) []byte {
-	decode, _ := base58.Decode(string(input[:]))
+	decode, _ := base58.Decode(string(input))
+
 	return decode
 }

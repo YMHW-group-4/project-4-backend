@@ -165,8 +165,7 @@ func (n *Node) setup() {
 	n.wg.Add(1)
 
 	// wait for replies
-	// TODO change to other duration?
-	time.AfterFunc(5*time.Second, func() {
+	time.AfterFunc(5*time.Second, func() { //nolint
 		defer n.wg.Done()
 
 		b := make([]blockchain.Block, 0)
@@ -257,7 +256,7 @@ func (n *Node) listen() {
 
 				util.UnmarshalType(msg.Payload, &b)
 
-				n.blockchain.AddBlock(b)
+				n.blockchain.AddBlock(b, msg.Peer)
 			case msg := <-net.Subs[networking.Blockchain].Messages:
 				if len(n.blockchain.Blocks) > 0 {
 					n.reply(msg.Peer, networking.Blockchain, util.MarshalType(n.blockchain))

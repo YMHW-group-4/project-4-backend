@@ -1,8 +1,6 @@
 package blockchain
 
 import (
-	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/suite"
 	"testing"
 	"time"
@@ -28,14 +26,11 @@ func (suite *MempoolTestSuite) TestMempoolDoubleTransaction() {
 	transaction := Transaction{
 		Sender:    "Sender",
 		Receiver:  "Receiver",
-		Signature: string("Signature"),
+		Signature: []byte("signature"),
 		Amount:    10,
 		Nonce:     1,
 		Timestamp: time.Now().Unix(),
 	}
-
-	x, _ := json.MarshalIndent([]Transaction{transaction, transaction}, "", " ") //nolint
-	log.Debug().Msgf("%s", x)
 
 	err := suite.mp.add([]Transaction{transaction, transaction}...)
 

@@ -63,8 +63,6 @@ func main() {
 
 	api.Start()
 
-	log.Debug().Msgf("%v", node.blockchain.Blocks)
-
 	node.HandleSigterm()
 
 	api.Stop()

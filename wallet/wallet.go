@@ -6,7 +6,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"golang.org/x/crypto/ripemd160"
 )
 
 // Wallet represents a wallet in the context of a blockchain.
@@ -25,6 +24,7 @@ func (w *Wallet) Address() []byte {
 	versionedHash := append([]byte{walletVersion}, pubHash...)
 	checksum := Checksum(versionedHash)
 	finalHash := append(versionedHash, checksum...)
+
 	return util.Base58Encode(finalHash)
 }
 
@@ -35,11 +35,13 @@ func CreateWallet() map[string]any {
 	body := make(map[string]any)
 	body["private"] = address
 	body["public"] = wallet.PublicKey
+
 	return body
 }
 
 func MakeWallet() *Wallet {
 	privateKey, publicKey := NewKeyPair()
+
 	return &Wallet{privateKey, publicKey}
 }
 
@@ -47,19 +49,22 @@ func NewKeyPair() (ecdsa.PrivateKey, []byte) {
 	curve := elliptic.P256()
 	private, _ := ecdsa.GenerateKey(curve, rand.Reader)
 	pub := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
+
 	return *private, pub
 }
 
 func Checksum(ripeMdHash []byte) []byte {
 	firstHash := sha256.Sum256(ripeMdHash)
 	secondHash := sha256.Sum256(firstHash[:])
+
 	return secondHash[:checksumLength]
 }
 
 func PublicKeyHash(publicKey []byte) []byte {
 	hashedPublicKey := sha256.Sum256(publicKey)
-	hasher := ripemd160.New()
+	hasher := sha256.New()
 	_, _ = hasher.Write(hashedPublicKey[:])
 	publicRipeMd := hasher.Sum(nil)
+
 	return publicRipeMd
 }

@@ -13,9 +13,9 @@ var errInvalidTransaction = errors.New("invalid transaction")
 type Transaction struct {
 	Sender    string  `json:"sender"`
 	Receiver  string  `json:"receiver"`
-	Signature string  `json:"signature"`
-	Amount    float32 `json:"amount"`
-	Nonce     uint32  `json:"nonce"`
+	Signature []byte  `json:"signature"`
+	Amount    float64 `json:"amount"`
+	Nonce     uint64  `json:"nonce"`
 	Timestamp int64   `json:"timestamp"`
 }
 

@@ -87,7 +87,7 @@ func (a *API) Start() {
 func (a *API) Register() {
 	host := "localhost"
 
-	url := fmt.Sprintf("%s:%d/register_node?host=%s%s", SeedHost, SeedPort, host, a.server.Addr)
+	url := fmt.Sprintf("%s:%d/register_node?host=%s&port=%s", SeedHost, SeedPort, host, a.server.Addr)
 
 	if _, err := http.Get(url); err != nil {
 		log.Debug().Err(err).Msg("api: failed to register")
@@ -95,7 +95,7 @@ func (a *API) Register() {
 		return
 	}
 
-	log.Debug().Msg("api: registered to seed")
+	log.Debug().Msg("api: registered to DNS seed")
 }
 
 func balance(w http.ResponseWriter, r *http.Request) {
@@ -114,13 +114,13 @@ func balance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var b float32
+	var b string
 
 	account, err := node.blockchain.GetAccount(sender)
 	if err != nil {
-		b = 0
+		b = "0.00"
 	} else {
-		b = account.Balance
+		b = account.Balance.String()
 	}
 
 	if err = json.NewEncoder(w).Encode(b); err != nil {
@@ -151,14 +151,14 @@ func transaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := strconv.ParseFloat(amount, 32)
+	f, err := strconv.ParseFloat(amount, 64) //nolint
 	if err != nil {
 		http.Error(w, "parameter 'amount' invalid", http.StatusBadRequest)
 
 		return
 	}
 
-	t, err := node.blockchain.CreateTransaction(sender, receiver, []byte(signature), float32(f))
+	t, err := node.blockchain.CreateTransaction(sender, receiver, []byte(signature), f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
@@ -193,14 +193,14 @@ func freeMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := strconv.ParseFloat(amount, 32)
+	f, err := strconv.ParseFloat(amount, 64) //nolint
 	if err != nil {
 		http.Error(w, "parameter 'amount' invalid", http.StatusBadRequest)
 
 		return
 	}
 
-	t, err := node.blockchain.CreateTransaction("genesis", sender, []byte(""), float32(f))
+	t, err := node.blockchain.CreateTransaction("genesis", sender, []byte(""), f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
