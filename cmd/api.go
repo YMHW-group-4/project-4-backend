@@ -1,16 +1,25 @@
 package main
 
 import (
+	"backend/networking"
+	"backend/util"
+	"backend/wallet"
 	"context"
+
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/rs/cors"
 	"github.com/rs/zerolog/log"
 )
 
-var node *Node
+var SeedHost = "http://167.86.93.188"
+var SeedPort = 3000
 
 // API needs Node; main cannot be shared, thus refactoring needs to be done.
 // Moving the API here until rewrite.
@@ -23,17 +32,18 @@ type API struct {
 }
 
 // NewAPI creates a new HTTP API.
-func NewAPI(port int, n *Node) *API {
+func NewAPI(port int) *API {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/transaction", Transaction)
-
-	node = n
+	mux.HandleFunc("/transaction", transaction)
+	mux.HandleFunc("/freemoney", freeMoney)
+	mux.HandleFunc("/wallets", wallets)
+	mux.HandleFunc("/balance", balance)
 
 	return &API{
 		server: &http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
-			Handler: mux,
+			Handler: cors.Default().Handler(mux),
 		},
 	}
 }
@@ -61,6 +71,8 @@ func (a *API) Start() {
 
 	a.wg.Add(1)
 
+	a.Register()
+
 	go func() {
 		defer a.wg.Done()
 
@@ -72,7 +84,153 @@ func (a *API) Start() {
 	log.Info().Msg("api: running")
 }
 
-func Transaction(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "%s", node.Uptime)
+func (a *API) Register() {
+	host := "localhost"
 
+	url := fmt.Sprintf("%s:%d/register_node?host=%s&port=%s", SeedHost, SeedPort, host, a.server.Addr)
+
+	if _, err := http.Get(url); err != nil {
+		log.Debug().Err(err).Msg("api: failed to register")
+
+		return
+	}
+
+	log.Debug().Msg("api: registered to DNS seed")
+}
+
+func balance(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Access-Control-Allow-Methods", "GET")
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	sender := strings.TrimSpace(r.URL.Query().Get("sender"))
+
+	if len(sender) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+
+		return
+	}
+
+	var b string
+
+	account, err := node.blockchain.GetAccount(sender)
+	if err != nil {
+		b = "0.00"
+	} else {
+		b = account.Balance.String()
+	}
+
+	if err = json.NewEncoder(w).Encode(b); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	log.Debug().Str("endpoint", "balance").Msg("api: handled request")
+}
+
+func transaction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Access-Control-Allow-Methods", "POST")
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	sender := strings.TrimSpace(r.URL.Query().Get("sender"))
+	receiver := strings.TrimSpace(r.URL.Query().Get("receiver"))
+	signature := strings.TrimSpace(r.URL.Query().Get("signature"))
+	amount := strings.TrimSpace(r.URL.Query().Get("amount"))
+
+	if len(sender) == 0 || len(receiver) == 0 || len(signature) == 0 || len(amount) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+
+		return
+	}
+
+	f, err := strconv.ParseFloat(amount, 64) //nolint
+	if err != nil {
+		http.Error(w, "parameter 'amount' invalid", http.StatusBadRequest)
+
+		return
+	}
+
+	t, err := node.blockchain.CreateTransaction(sender, receiver, []byte(signature), f)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	node.network.Publish(networking.Transaction, util.MarshalType(t))
+
+	if err = json.NewEncoder(w).Encode(t); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	log.Debug().Str("endpoint", "transaction").Msg("api: handled request")
+}
+
+func freeMoney(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Access-Control-Allow-Methods", "POST")
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	sender := strings.TrimSpace(r.URL.Query().Get("sender"))
+	amount := strings.TrimSpace(r.URL.Query().Get("amount"))
+
+	if len(sender) == 0 || len(amount) == 0 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+
+		return
+	}
+
+	f, err := strconv.ParseFloat(amount, 64) //nolint
+	if err != nil {
+		http.Error(w, "parameter 'amount' invalid", http.StatusBadRequest)
+
+		return
+	}
+
+	t, err := node.blockchain.CreateTransaction("genesis", sender, []byte(""), f)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	node.network.Publish(networking.Transaction, util.MarshalType(t))
+
+	if err = json.NewEncoder(w).Encode(t); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	log.Debug().Str("endpoint", "freemoney").Msg("api: handled request")
+}
+
+func wallets(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Access-Control-Allow-Methods", "GET")
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(wallet.CreateWallet()); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	log.Debug().Str("endpoint", "wallets").Msg("api: handled request")
 }

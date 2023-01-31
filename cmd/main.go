@@ -8,6 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var node *Node
+
 // setupLogger checks whether the Stdout is a terminal or not
 // if so it sets the global log's writer to a ConsoleWriter.
 func setupLogger() {
@@ -44,12 +46,14 @@ func main() {
 		Bool("debug", config.Debug).
 		Msg("node: startup")
 
-	node, err := NewNode(config)
+	n, err := NewNode(config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("node: failed to create node")
 	}
 
-	api := NewAPI(config.APIPort, node)
+	node = n
+
+	api := NewAPI(config.APIPort)
 
 	node.Run()
 

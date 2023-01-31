@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -26,8 +25,8 @@ type Blockchain struct {
 func NewBlockchain() *Blockchain {
 	return &Blockchain{
 		Blocks: make([]Block, 0),
-		mp:     newMempool(),
 		am:     newAccountModel(),
+		mp:     newMempool(),
 	}
 }
 
@@ -49,8 +48,8 @@ func (b *Blockchain) Init(blocks []Block) {
 }
 
 // AddBlock adds a new block to the blockchain.
-func (b *Blockchain) AddBlock(block Block) {
-	if err := b.validate(block); err != nil {
+func (b *Blockchain) AddBlock(block Block, validator string) {
+	if err := b.validate(block, validator); err != nil {
 		log.Error().Err(err).Msg("blockchain: failed to add block")
 
 		return
@@ -83,11 +82,27 @@ func (b *Blockchain) CreateBlock(validator string, amount uint16) (Block, error)
 func (b *Blockchain) AddTransaction(transaction Transaction) {
 	if err := b.mp.add(transaction); err != nil {
 		log.Error().Err(err).Msg("blockchain: failed to add transaction")
+
+		return
+	}
+
+	// update the account of the sender
+	if err := b.am.update(transaction.Sender, -transaction.Amount); err != nil {
+		log.Error().Err(err).Msg("blockchain: failed to update account model")
+
+		return
+	}
+
+	// update or add the account of the receiver
+	if err := b.am.update(transaction.Receiver, transaction.Amount); err != nil {
+		log.Error().Err(err).Msg("blockchain: failed to update account model")
+	} else if err = b.am.add(transaction.Receiver, transaction.Amount, 0); err != nil {
+		log.Error().Err(err).Msg("blockchain: failed to add account to account model")
 	}
 }
 
 // CreateTransaction creates a new transaction
-func (b *Blockchain) CreateTransaction(sender string, receiver string, signature []byte, amount float32) (Transaction, error) {
+func (b *Blockchain) CreateTransaction(sender string, receiver string, signature []byte, amount float64) (Transaction, error) {
 	// check if sender exists
 	tx, err := b.am.get(sender)
 	if err != nil {
@@ -95,34 +110,11 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	}
 
 	// check if sender has sufficient funds
-	if amount > tx.balance {
+	if amount > tx.Balance.Float64() {
 		return Transaction{}, fmt.Errorf("%w: insufficient funds", errInvalidTransaction)
 	}
 
-	hash := []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount))
-
-	sigPublicKeyECDSA, _ := crypto.SigToPub(hash, signature)
-
-	sigPublicKeyBytes := crypto.FromECDSAPub(sigPublicKeyECDSA)
-
-	log.Debug().Msgf("gamming %v", sigPublicKeyBytes)
-
-	//fmt.Printf("Recovered public key: %x\n", sigPublicKeyBytes)
-
-	// derive key from signature
-
-	//genPub, err := x509.ParsePKIXPublicKey([]byte(sender))
-	//if err != nil {
-	//	return Transaction{}, err
-	//}
-
-	//key := genPub.(*ecdsa.PublicKey)
-	//key, err := crypto.SigToPub(hash, signature)
-	//if err != nil {
-	//	return Transaction{}, err
-	//}
-
-	//check if signature is valid
+	//check if signature is valid FIXME
 	//if !ecdsa.VerifyASN1(key, []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount)), signature) {
 	//	return Transaction{}, fmt.Errorf("%w: invalid signature", errInvalidTransaction)
 	//}
@@ -131,9 +123,9 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	t := Transaction{
 		Sender:    sender,
 		Receiver:  receiver,
-		Signature: string(signature),
+		Signature: signature,
 		Amount:    amount,
-		Nonce:     tx.transactions,
+		Nonce:     tx.Transactions,
 		Timestamp: time.Now().Unix(),
 	}
 
@@ -166,16 +158,22 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 }
 
 // validate validates a singular block.
-func (b *Blockchain) validate(block Block) error {
-	// FIXME
+func (b *Blockchain) validate(block Block, validator string) error {
 	last := b.Blocks[len(b.Blocks)-1]
 
-	if res := bytes.Compare(last.hash(), []byte(block.PrevHash)); res != 0 {
+	// compare hashes
+	if res := bytes.Compare(last.hash(), block.PrevHash); res != 0 {
 		return fmt.Errorf("%w, %s", errInvalidBlock, "hash does not match")
 	}
 
+	// check timstamp
 	if last.Timestamp > block.Timestamp {
 		return fmt.Errorf("%w, %s", errInvalidBlock, "invalid timestamp")
+	}
+
+	// compare validator
+	if block.Validator != validator {
+		return fmt.Errorf("%w, %s", errInvalidBlock, "invalid validator")
 	}
 
 	return nil
@@ -188,8 +186,8 @@ func (b *Blockchain) createGenesis() error {
 	t := Transaction{
 		Sender:    "",
 		Receiver:  "genesis",
-		Signature: "",
-		Amount:    math.MaxFloat32,
+		Signature: []byte(""),
+		Amount:    math.MaxUint64,
 		Nonce:     0,
 		Timestamp: time.Now().Unix(),
 	}
@@ -221,6 +219,11 @@ func (b *Blockchain) FromFile() ([]Block, error) {
 	log.Debug().Msg("blockchain: reading from file")
 
 	return blockchain.Blocks, nil
+}
+
+// GetAccount returns the account associated with the given key.
+func (b *Blockchain) GetAccount(key string) (*Account, error) {
+	return b.am.get(key)
 }
 
 // DumpJSON writes the current Blockchain to a JSON file.
