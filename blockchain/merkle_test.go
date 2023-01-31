@@ -12,7 +12,7 @@ var transactions = []Transaction{
 	{
 		Sender:    "mike",
 		Receiver:  "bob",
-		Signature: []byte("signature"),
+		Signature: "signature",
 		Amount:    100,
 		Nonce:     1,
 		Timestamp: 123456789,
@@ -20,7 +20,7 @@ var transactions = []Transaction{
 	{
 		Sender:    "bob",
 		Receiver:  "douglas",
-		Signature: []byte("signature"),
+		Signature: "signature",
 		Amount:    250,
 		Nonce:     1,
 		Timestamp: 123456789,
@@ -28,7 +28,7 @@ var transactions = []Transaction{
 	{
 		Sender:    "alice",
 		Receiver:  "john",
-		Signature: []byte("signature"),
+		Signature: "signature",
 		Amount:    100,
 		Nonce:     1,
 		Timestamp: 123456789,
@@ -36,7 +36,7 @@ var transactions = []Transaction{
 	{
 		Sender:    "patrick",
 		Receiver:  "steve",
-		Signature: []byte("signature"),
+		Signature: "signature",
 		Amount:    1000,
 		Nonce:     1,
 		Timestamp: 123456789,
@@ -68,7 +68,7 @@ func TestNonEqualTreeRoots(t *testing.T) {
 		{
 			Sender:    "mike",
 			Receiver:  "bob",
-			Signature: []byte("signature"),
+			Signature: "signature",
 			Amount:    100,
 			Nonce:     1,
 			Timestamp: 123456789,
@@ -76,7 +76,7 @@ func TestNonEqualTreeRoots(t *testing.T) {
 		{
 			Sender:    "bob",
 			Receiver:  "douglas",
-			Signature: []byte("signature"),
+			Signature: "signature",
 			Amount:    250,
 			Nonce:     1,
 			Timestamp: 123456789,
@@ -84,7 +84,7 @@ func TestNonEqualTreeRoots(t *testing.T) {
 		{
 			Sender:    "alice",
 			Receiver:  "john",
-			Signature: []byte("signature"),
+			Signature: "signature",
 			Amount:    100,
 			Nonce:     1,
 			Timestamp: 123456789,
@@ -92,7 +92,7 @@ func TestNonEqualTreeRoots(t *testing.T) {
 		{
 			Sender:    "patrick",
 			Receiver:  "steve",
-			Signature: []byte("signature"),
+			Signature: "signature",
 			Amount:    375, // 1000 -> 375
 			Nonce:     1,
 			Timestamp: 123456789,

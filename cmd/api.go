@@ -1,38 +1,39 @@
 package main
 
 import (
-	"backend/networking"
-	"backend/util"
-	"backend/wallet"
 	"context"
-
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 
+	"backend/networking"
+	"backend/util"
+	"backend/wallet"
+
 	"github.com/rs/cors"
 	"github.com/rs/zerolog/log"
 )
-
-var SeedHost = "http://167.86.93.188"
-var SeedPort = 3000
 
 // API needs Node; main cannot be shared, thus refactoring needs to be done.
 // Moving the API here until rewrite.
 // Spoiler: refactoring will not be done.
 
+var errInvalidHost = errors.New("invalid host")
+
 // API represents the HTTP API.
 type API struct {
 	server *http.Server
+	seed   string
 	wg     sync.WaitGroup
 }
 
 // NewAPI creates a new HTTP API.
-func NewAPI(port int) *API {
+func NewAPI(port int, seed string) *API {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/transaction", transaction)
@@ -45,6 +46,7 @@ func NewAPI(port int) *API {
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: cors.Default().Handler(mux),
 		},
+		seed: seed,
 	}
 }
 
@@ -84,13 +86,34 @@ func (a *API) Start() {
 	log.Info().Msg("api: running")
 }
 
-func (a *API) Register() {
-	host := "localhost"
+// getOutboundIP Get preferred outbound ip of this machine.
+func getOutboundIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Debug().Err(err).Msg("api: failed to get outbound IP")
+	}
+	defer conn.Close()
 
-	url := fmt.Sprintf("%s:%d/register_node?host=%s&port=%s", SeedHost, SeedPort, host, a.server.Addr)
+	localAddr, ok := conn.LocalAddr().(*net.UDPAddr)
+	if !ok {
+		return net.IP{}
+	}
+
+	return localAddr.IP
+}
+
+// Register registers the node to the DNS seed.
+func (a *API) Register() {
+	if len(strings.TrimSpace(a.seed)) == 0 {
+		log.Debug().Err(errInvalidHost).Msg("api: failed to register to DNS seed")
+
+		return
+	}
+
+	url := fmt.Sprintf("%s/register_node?host=%s&port=%s", a.seed, getOutboundIP(), a.server.Addr)
 
 	if _, err := http.Get(url); err != nil {
-		log.Debug().Err(err).Msg("api: failed to register")
+		log.Debug().Err(err).Msg("api: failed to register to DNS seed")
 
 		return
 	}
@@ -98,6 +121,7 @@ func (a *API) Register() {
 	log.Debug().Msg("api: registered to DNS seed")
 }
 
+// balance returns the balance of a wallet to a caller.
 func balance(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Access-Control-Allow-Methods", "GET")
@@ -132,6 +156,7 @@ func balance(w http.ResponseWriter, r *http.Request) {
 	log.Debug().Str("endpoint", "balance").Msg("api: handled request")
 }
 
+// transaction creates and returns a new transaction to the caller.
 func transaction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Access-Control-Allow-Methods", "POST")
@@ -176,6 +201,7 @@ func transaction(w http.ResponseWriter, r *http.Request) {
 	log.Debug().Str("endpoint", "transaction").Msg("api: handled request")
 }
 
+// freeMoney creates and returns a new transaction from genesis to the caller.
 func freeMoney(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Access-Control-Allow-Methods", "POST")
@@ -218,6 +244,7 @@ func freeMoney(w http.ResponseWriter, r *http.Request) {
 	log.Debug().Str("endpoint", "freemoney").Msg("api: handled request")
 }
 
+// wallets creates and returns a new wallet to the caller.
 func wallets(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Access-Control-Allow-Methods", "GET")

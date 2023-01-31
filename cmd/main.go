@@ -40,8 +40,8 @@ func main() {
 
 	log.Info().
 		Str("version", version).
-		Int("blockchain_port", config.Port).
-		Int("API_port", config.APIPort).
+		Int("port", config.Port).
+		Int("api", config.APIPort).
 		Str("interval", config.Interval).
 		Bool("debug", config.Debug).
 		Msg("node: startup")
@@ -53,7 +53,7 @@ func main() {
 
 	node = n
 
-	api := NewAPI(config.APIPort)
+	api := NewAPI(config.APIPort, config.Seed)
 
 	node.Run()
 

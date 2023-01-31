@@ -10,8 +10,7 @@ import (
 
 type MempoolTestSuite struct {
 	suite.Suite
-	mp   *mempool
-	data []Transaction
+	mp *mempool
 }
 
 func (suite *MempoolTestSuite) SetupTest() {
@@ -26,7 +25,7 @@ func (suite *MempoolTestSuite) TestMempoolDoubleTransaction() {
 	transaction := Transaction{
 		Sender:    "Sender",
 		Receiver:  "Receiver",
-		Signature: []byte("signature"),
+		Signature: "signature",
 		Amount:    10,
 		Nonce:     1,
 		Timestamp: time.Now().Unix(),
@@ -37,10 +36,9 @@ func (suite *MempoolTestSuite) TestMempoolDoubleTransaction() {
 	assert.NotNil(suite.T(), err)
 }
 
-func TestMempoolRetrieveTransactions(t *testing.T) {
-	mp := newMempool()
+func (suite *MempoolTestSuite) TestMempoolRetrieveTransactions() {
 
-	_ = mp.add(transactions...)
+	_ = suite.mp.add(transactions...)
 
-	assert.Equal(t, 3, len(mp.retrieve(3)))
+	assert.Equal(suite.T(), 3, len(suite.mp.retrieve(3)))
 }
