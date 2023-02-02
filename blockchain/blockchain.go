@@ -1,6 +1,10 @@
 package blockchain
 
 import (
+	"backend/util"
+	"backend/wallet"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -31,11 +35,11 @@ func NewBlockchain() *Blockchain {
 }
 
 // Init initializes the blockchain and its account model.
-func (b *Blockchain) Init(blocks []Block) {
+func (b *Blockchain) Init(validator string, blocks []Block) {
 	if len(blocks) > 0 {
 		b.Blocks = blocks
 	} else {
-		if err := b.createGenesis(); err != nil {
+		if err := b.createGenesis(validator); err != nil {
 			log.Fatal().Err(err).Msg("blockchain: failed to create genesis")
 		}
 	}
@@ -49,8 +53,8 @@ func (b *Blockchain) Init(blocks []Block) {
 
 // AddBlock adds a new block to the blockchain.
 func (b *Blockchain) AddBlock(block Block, validator string) {
-	if err := b.validate(block, validator); err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to add block")
+	if err := block.validate(b.Blocks[len(b.Blocks)-1], validator); err != nil {
+		log.Error().Err(err).Msg("blockchain: block is invalid")
 
 		return
 	}
@@ -96,12 +100,12 @@ func (b *Blockchain) AddTransaction(transaction Transaction) {
 	// update or add the account of the receiver
 	if err := b.am.update(transaction.Receiver, transaction.Amount); err != nil {
 		log.Error().Err(err).Msg("blockchain: failed to update account model")
-	} else if err = b.am.add(transaction.Receiver, transaction.Amount, 0); err != nil {
+	} else if err = b.am.add(transaction.Receiver, transaction.Amount); err != nil {
 		log.Error().Err(err).Msg("blockchain: failed to add account to account model")
 	}
 }
 
-// CreateTransaction creates a new transaction
+// CreateTransaction creates a new transaction.
 func (b *Blockchain) CreateTransaction(sender string, receiver string, signature []byte, amount float64) (Transaction, error) {
 	// check if sender exists
 	tx, err := b.am.get(sender)
@@ -110,14 +114,20 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	}
 
 	// check if sender has sufficient funds
-	if amount > tx.Balance.Float64() {
+	if amount > tx.Balance.Float64() || 0 > amount {
 		return Transaction{}, fmt.Errorf("%w: insufficient funds", errInvalidTransaction)
 	}
 
-	//check if signature is valid FIXME
-	//if !ecdsa.VerifyASN1(key, []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount)), signature) {
-	//	return Transaction{}, fmt.Errorf("%w: invalid signature", errInvalidTransaction)
-	//}
+	// check whether the signature is valid
+	key, err := wallet.DecodePublicKey(util.HexDecode(sender))
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	// FIXME
+	if !wallet.Verify(key, []byte(""), signature) {
+		return Transaction{}, fmt.Errorf("%w: invalid signature", errInvalidTransaction)
+	}
 
 	// create transaction
 	t := Transaction{
@@ -144,7 +154,7 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 			return Transaction{}, err
 		}
 	} else {
-		if err = b.am.add(receiver, amount, 0); err != nil {
+		if err = b.am.add(receiver, amount); err != nil {
 			return Transaction{}, err
 		}
 	}
@@ -157,42 +167,30 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	return t, nil
 }
 
-// validate validates a singular block.
-func (b *Blockchain) validate(block Block, validator string) error {
-	last := b.Blocks[len(b.Blocks)-1]
-
-	// compare hashes
-	if hex.EncodeToString(last.hash()) != block.PrevHash {
-		return fmt.Errorf("%w, %s", errInvalidBlock, "hash does not match")
-	}
-
-	// check timstamp
-	if last.Timestamp > block.Timestamp {
-		return fmt.Errorf("%w, %s", errInvalidBlock, "invalid timestamp")
-	}
-
-	// compare validator
-	if block.Validator != validator {
-		return fmt.Errorf("%w, %s", errInvalidBlock, "invalid validator")
-	}
-
-	return nil
-}
-
 // createGenesis creates the genesis block.
-func (b *Blockchain) createGenesis() error {
+func (b *Blockchain) createGenesis(validator string) error {
 	log.Debug().Msg("blockchain: creating genesis block")
 
+	genesis, err := wallet.GenesisWallet()
+	if err != nil {
+		return err
+	}
+
+	sign, err := ecdsa.SignASN1(rand.Reader, genesis.Priv, []byte("genesis"))
+	if err != nil {
+		return err
+	}
+
 	t := Transaction{
-		Sender:    "",
-		Receiver:  "genesis",
-		Signature: "",
+		Sender:    genesis.Private(),
+		Receiver:  genesis.Public(),
+		Signature: util.HexEncode(sign),
 		Amount:    math.MaxUint64,
 		Nonce:     0,
 		Timestamp: time.Now().Unix(),
 	}
 
-	block, err := createBlock("genesis", []byte(""), []Transaction{t})
+	block, err := createBlock(validator, []byte(""), []Transaction{t})
 	if err != nil {
 		return err
 	}

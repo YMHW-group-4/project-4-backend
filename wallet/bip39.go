@@ -3,8 +3,8 @@ package wallet
 import "github.com/tyler-smith/go-bip39"
 
 // generateMnemonic generates a new mnenomic according to the bip39 specification.
-func generateMnemonic() (string, error) {
-	entropy, err := bip39.NewEntropy(256) //nolint
+func generateMnemonic(bitSize int) (string, error) {
+	entropy, err := bip39.NewEntropy(bitSize)
 	if err != nil {
 		return "", err
 	}

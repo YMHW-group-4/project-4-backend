@@ -115,7 +115,7 @@ func (n *Node) setStreamHandlers() {
 			log.Error().Err(err).Msg("network: failed to read reply")
 		}
 
-		util.UnmarshalType(msg, &message)
+		util.JSONDecode(msg, &message)
 
 		log.Debug().Str("topic", string(message.Topic)).Msg("network: received reply")
 
@@ -123,7 +123,7 @@ func (n *Node) setStreamHandlers() {
 		case networking.Blockchain:
 			var b blockchain.Blockchain
 
-			util.UnmarshalType(message.Payload, &b)
+			util.JSONDecode(message.Payload, &b)
 
 			if len(b.Blocks) > 0 {
 				blocks = append(blocks, b.Blocks)
@@ -179,7 +179,7 @@ func (n *Node) setup() {
 		}
 
 		// initialize blockchain
-		n.blockchain.Init(b)
+		n.blockchain.Init(n.network.ID(), b)
 
 		// reset blocks
 		blocks = nil
@@ -248,18 +248,18 @@ func (n *Node) listen() {
 			case msg := <-net.Subs[networking.Transaction].Messages:
 				var t blockchain.Transaction
 
-				util.UnmarshalType(msg.Payload, &t)
+				util.JSONDecode(msg.Payload, &t)
 
 				n.blockchain.AddTransaction(t)
 			case msg := <-net.Subs[networking.Block].Messages:
 				var b blockchain.Block
 
-				util.UnmarshalType(msg.Payload, &b)
+				util.JSONDecode(msg.Payload, &b)
 
 				n.blockchain.AddBlock(b, msg.Peer)
 			case msg := <-net.Subs[networking.Blockchain].Messages:
 				if len(n.blockchain.Blocks) > 0 {
-					n.reply(msg.Peer, networking.Blockchain, util.MarshalType(n.blockchain))
+					n.reply(msg.Peer, networking.Blockchain, util.JSONEncode(n.blockchain))
 				}
 			}
 		}

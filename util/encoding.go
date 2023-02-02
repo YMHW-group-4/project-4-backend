@@ -1,12 +1,12 @@
 package util
 
 import (
+	"encoding/hex"
 	"encoding/json"
-	"github.com/mr-tron/base58"
 )
 
-// MarshalType alias for json.Marshal.
-func MarshalType(v any) []byte {
+// JSONEncode encodes data to JSON.
+func JSONEncode(v any) []byte {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return nil
@@ -15,8 +15,8 @@ func MarshalType(v any) []byte {
 	return data
 }
 
-// UnmarshalType alias for json.Unmarshal.
-func UnmarshalType(data []byte, v any) any {
+// JSONDecode decodes data from JSON.
+func JSONDecode(data []byte, v any) any {
 	err := json.Unmarshal(data, &v)
 	if err != nil {
 		return nil
@@ -25,14 +25,17 @@ func UnmarshalType(data []byte, v any) any {
 	return v
 }
 
-func Base58Encode(input []byte) []byte {
-	encode := base58.Encode(input)
+// HexDecode decodes data from hex.
+func HexDecode(data string) []byte {
+	b, err := hex.DecodeString(data)
+	if err != nil {
+		return nil
+	}
 
-	return []byte(encode)
+	return b
 }
 
-func Base58Decode(input []byte) []byte {
-	decode, _ := base58.Decode(string(input))
-
-	return decode
+// HexEncode encodes data to hex.
+func HexEncode(data []byte) string {
+	return hex.EncodeToString(data)
 }

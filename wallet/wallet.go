@@ -1,70 +1,79 @@
 package wallet
 
 import (
-	"backend/util"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
+	"embed"
+
+	"backend/util"
 )
 
-// Wallet represents a wallet in the context of a blockchain.
-const (
-	checksumLength = 4
-	walletVersion  = byte(0x00)
-)
+//go:embed keys
+var keys embed.FS
 
+// Wallet represents the private and public key within the blockchain.
 type Wallet struct {
-	PrivateKey ecdsa.PrivateKey
-	PublicKey  []byte
+	Priv *ecdsa.PrivateKey
+	Pub  *ecdsa.PublicKey
 }
 
-func (w *Wallet) Address() []byte {
-	pubHash := PublicKeyHash(w.PublicKey)
-	versionedHash := append([]byte{walletVersion}, pubHash...)
-	checksum := Checksum(versionedHash)
-	finalHash := append(versionedHash, checksum...)
+// CreateWallet creates a new Wallet.
+func CreateWallet() (*Wallet, error) {
+	priv, pub, err := generateKey(elliptic.P256())
+	if err != nil {
+		return nil, err
+	}
 
-	return util.Base58Encode(finalHash)
+	return &Wallet{
+		Priv: priv,
+		Pub:  pub,
+	}, nil
 }
 
-func CreateWallet() map[string]any {
-	wallet := MakeWallet()
-	address := wallet.Address()
+// Public returns the public key formatted as a string.
+func (w *Wallet) Public() string {
+	pub, err := EncodePublicKey(w.Pub)
+	if err != nil {
+		return ""
+	}
 
-	body := make(map[string]any)
-	body["private"] = address
-	body["public"] = wallet.PublicKey
-
-	return body
+	return util.HexEncode(pub)
 }
 
-func MakeWallet() *Wallet {
-	privateKey, publicKey := NewKeyPair()
+// Private returns the private key formatted as a string.
+func (w *Wallet) Private() string {
+	priv, err := EncodePrivateKey(w.Priv)
+	if err != nil {
+		return ""
+	}
 
-	return &Wallet{privateKey, publicKey}
+	return util.HexEncode(priv)
 }
 
-func NewKeyPair() (ecdsa.PrivateKey, []byte) {
-	curve := elliptic.P256()
-	private, _ := ecdsa.GenerateKey(curve, rand.Reader)
-	pub := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
+// GenesisWallet returns the Wallet of genesis.
+func GenesisWallet() (*Wallet, error) {
+	priv, err := keys.ReadFile("keys/genesis.priv.pem")
+	if err != nil {
+		return nil, err
+	}
 
-	return *private, pub
-}
+	pub, err := keys.ReadFile("keys/genesis.pub.pem")
+	if err != nil {
+		return nil, err
+	}
 
-func Checksum(ripeMdHash []byte) []byte {
-	firstHash := sha256.Sum256(ripeMdHash)
-	secondHash := sha256.Sum256(firstHash[:])
+	privKey, err := pemDecodePrivateKey(priv)
+	if err != nil {
+		return nil, err
+	}
 
-	return secondHash[:checksumLength]
-}
+	pubKey, err := pemDecodePublicKey(pub)
+	if err != nil {
+		return nil, err
+	}
 
-func PublicKeyHash(publicKey []byte) []byte {
-	hashedPublicKey := sha256.Sum256(publicKey)
-	hasher := sha256.New()
-	_, _ = hasher.Write(hashedPublicKey[:])
-	publicRipeMd := hasher.Sum(nil)
-
-	return publicRipeMd
+	return &Wallet{
+		Priv: privKey,
+		Pub:  pubKey,
+	}, nil
 }

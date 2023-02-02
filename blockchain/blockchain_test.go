@@ -28,12 +28,11 @@ func (suite *BlockchainTestSuite) TestBlockchainCreateTransaction() {
 	priv, _ := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	pub := priv.PublicKey
 
-	_ = suite.b.am.add(fmt.Sprintf("%v", pub), 20, 0)
+	_ = suite.b.am.add(fmt.Sprintf("%v", pub), 20)
 	hash := []byte(fmt.Sprintf("%s%s%d", pub, "receiver", 20))
 
-	//
 	sig, _ := ecdsa.SignASN1(rand.Reader, priv, hash)
-	//
+
 	_, err := suite.b.CreateTransaction(fmt.Sprintf("%v", pub), "receiver", sig, 20)
 	log.Debug().Err(err).Send()
 

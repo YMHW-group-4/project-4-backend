@@ -37,7 +37,6 @@ func (suite *MempoolTestSuite) TestMempoolDoubleTransaction() {
 }
 
 func (suite *MempoolTestSuite) TestMempoolRetrieveTransactions() {
-
 	_ = suite.mp.add(transactions...)
 
 	assert.Equal(suite.T(), 3, len(suite.mp.retrieve(3)))
