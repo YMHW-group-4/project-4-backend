@@ -10,7 +10,7 @@ import (
 func TestAccountModelFromBlock(t *testing.T) {
 	am := newAccountModel()
 
-	_ = am.add("genesis", 10000, 0) //nolint
+	_ = am.add("genesis", 10000) //nolint
 
 	var blocks []Block
 
@@ -44,7 +44,7 @@ func TestAccountModelFromBlock(t *testing.T) {
 func TestAccountModelTransactions(t *testing.T) {
 	am := newAccountModel()
 
-	_ = am.add("genesis", 10000, 0)
+	_ = am.add("genesis", 10000)
 
 	t1 := Transaction{Sender: "genesis", Receiver: "receiver", Amount: 20.15}
 	t2 := Transaction{Sender: "genesis", Receiver: "receiver", Amount: 10.15}

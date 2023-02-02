@@ -105,7 +105,7 @@ func (am *accountModel) exists(key string) bool {
 }
 
 // add adds the given key to the accountModel.
-func (am *accountModel) add(key string, balance float64, transactions uint64) error {
+func (am *accountModel) add(key string, balance float64) error {
 	if am.exists(key) {
 		return errors.ErrInvalidOperation("key already exists")
 	}
@@ -124,7 +124,7 @@ func (am *accountModel) add(key string, balance float64, transactions uint64) er
 
 	am.accounts[key] = &Account{
 		Balance:      ToCoin(balance),
-		Transactions: transactions,
+		Transactions: 0,
 	}
 
 	return nil

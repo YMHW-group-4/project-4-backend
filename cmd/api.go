@@ -190,7 +190,7 @@ func transaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	node.network.Publish(networking.Transaction, util.MarshalType(t))
+	node.network.Publish(networking.Transaction, util.JSONEncode(t))
 
 	if err = json.NewEncoder(w).Encode(t); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -233,7 +233,7 @@ func freeMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	node.network.Publish(networking.Transaction, util.MarshalType(t))
+	node.network.Publish(networking.Transaction, util.JSONEncode(t))
 
 	if err = json.NewEncoder(w).Encode(t); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -253,7 +253,14 @@ func wallets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(wallet.CreateWallet()); err != nil {
+	wa, err := wallet.CreateWallet()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(wa); err != nil { // FIXME
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return

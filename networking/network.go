@@ -69,6 +69,11 @@ func NewNetwork(port int) (*Network, error) {
 	}, nil
 }
 
+// ID returns the peer ID.
+func (n *Network) ID() string {
+	return n.Host.ID().String()
+}
+
 // Start starts the Network.
 func (n *Network) Start() error {
 	log.Debug().Msg("network: starting")
