@@ -2,8 +2,8 @@ package wallet
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"embed"
+	"os"
 
 	"backend/util"
 )
@@ -13,41 +13,51 @@ var keys embed.FS
 
 // Wallet represents the private and public key within the blockchain.
 type Wallet struct {
-	Priv *ecdsa.PrivateKey
-	Pub  *ecdsa.PublicKey
+	Mnemonic string
+	Priv     *ecdsa.PrivateKey
+	Pub      *ecdsa.PublicKey
 }
 
 // CreateWallet creates a new Wallet.
-func CreateWallet() (*Wallet, error) {
-	priv, pub, err := generateKey(elliptic.P256())
+func CreateWallet(mnemonic string, password string) (*Wallet, error) {
+	m, priv, pub, err := NewKeyPair(mnemonic, password)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Wallet{
-		Priv: priv,
-		Pub:  pub,
+		Mnemonic: m,
+		Priv:     priv,
+		Pub:      pub,
 	}, nil
 }
 
 // Public returns the public key formatted as a string.
 func (w *Wallet) Public() string {
-	pub, err := EncodePublicKey(w.Pub)
-	if err != nil {
-		return ""
-	}
-
-	return util.HexEncode(pub)
+	return util.HexEncode(EncodePublicKey(w.Pub))
 }
 
 // Private returns the private key formatted as a string.
 func (w *Wallet) Private() string {
-	priv, err := EncodePrivateKey(w.Priv)
+	return util.HexEncode(EncodePrivateKey(w.Priv))
+}
+
+// generateGenesis generates a new keypair for genesis.
+func generateGenesis() error {
+	w, err := CreateWallet("", "genesis")
 	if err != nil {
-		return ""
+		return err
 	}
 
-	return util.HexEncode(priv)
+	if err = os.WriteFile("keys/genesis.priv.pem", pemEncodePrivateKey(w.Priv), 0600); err != nil { //nolint
+		return err
+	}
+
+	if err = os.WriteFile("keys/genesis.pub.pem", pemEncodePublicKey(w.Pub), 0600); err != nil { //nolint
+		return err
+	}
+
+	return nil
 }
 
 // GenesisWallet returns the Wallet of genesis.

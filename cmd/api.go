@@ -253,7 +253,7 @@ func wallets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wa, err := wallet.CreateWallet()
+	wa, err := wallet.CreateWallet("", "") // FIXME placeholder
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 

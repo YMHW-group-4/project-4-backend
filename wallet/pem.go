@@ -49,31 +49,21 @@ func pemDecodePrivateKey(key []byte) (*ecdsa.PrivateKey, error) {
 }
 
 // pemEncodePublicKey encodes an ECDSA public key to PEM format.
-func pemEncodePublicKey(key *ecdsa.PublicKey) ([]byte, error) {
-	b, err := EncodePublicKey(key)
-	if err != nil {
-		return nil, err
-	}
-
+func pemEncodePublicKey(key *ecdsa.PublicKey) []byte {
 	block := &pem.Block{
 		Type:  "PUBLIC KEY",
-		Bytes: b,
+		Bytes: EncodePublicKey(key),
 	}
 
-	return pem.EncodeToMemory(block), nil
+	return pem.EncodeToMemory(block)
 }
 
 // pemEncodePrivateKey encodes an ECDSA private key to PEM format.
-func pemEncodePrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
-	b, err := EncodePrivateKey(key)
-	if err != nil {
-		return nil, err
-	}
-
+func pemEncodePrivateKey(key *ecdsa.PrivateKey) []byte {
 	keyBlock := &pem.Block{
 		Type:  "EC PRIVATE KEY",
-		Bytes: b,
+		Bytes: EncodePrivateKey(key),
 	}
 
-	return pem.EncodeToMemory(keyBlock), nil
+	return pem.EncodeToMemory(keyBlock)
 }

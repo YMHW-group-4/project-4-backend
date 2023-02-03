@@ -2,24 +2,10 @@ package wallet
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
-	"errors"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
-
-// errTypeAssertionFailed is the error when a type assertion cannot be made.
-var errTypeAssertionFailed = errors.New("type assertion failed")
-
-// generateKey generates a new keypair.
-func generateKey(curve elliptic.Curve) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	priv, err := ecdsa.GenerateKey(curve, rand.Reader)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return priv, &priv.PublicKey, nil
-}
 
 // Sign signs a hash using the private key.
 func Sign(priv *ecdsa.PrivateKey, hash []byte) ([]byte, error) {
@@ -32,33 +18,28 @@ func Verify(pub *ecdsa.PublicKey, hash []byte, sig []byte) bool {
 }
 
 // EncodePublicKey encodes a public key.
-func EncodePublicKey(key *ecdsa.PublicKey) ([]byte, error) {
-	return x509.MarshalPKIXPublicKey(key)
+func EncodePublicKey(key *ecdsa.PublicKey) []byte {
+	return crypto.FromECDSAPub(key)
 }
 
 // EncodePrivateKey encodes a private key.
-func EncodePrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
-	return x509.MarshalECPrivateKey(key)
+func EncodePrivateKey(key *ecdsa.PrivateKey) []byte {
+	return crypto.FromECDSA(key)
 }
 
 // DecodePublicKey decodes a public key.
 func DecodePublicKey(b []byte) (*ecdsa.PublicKey, error) {
-	pub, err := x509.ParsePKIXPublicKey(b)
+	pub, err := crypto.UnmarshalPubkey(b)
 	if err != nil {
 		return nil, err
 	}
 
-	ecdsaPub, ok := pub.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errTypeAssertionFailed
-	}
-
-	return ecdsaPub, nil
+	return pub, nil
 }
 
 // DecodePrivateKey decodes a private key.
 func DecodePrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
-	priv, err := x509.ParseECPrivateKey(b)
+	priv, err := crypto.ToECDSA(b)
 	if err != nil {
 		return nil, err
 	}
