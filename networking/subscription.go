@@ -83,7 +83,7 @@ func (subscription *Subscription) Close() error {
 
 // listen listens to incoming Messages.
 func (subscription *Subscription) listen() {
-	subscription.wg.Add(2) //nolint
+	subscription.wg.Add(2)
 
 	ch := make(chan *pubsub.Message, 0)
 

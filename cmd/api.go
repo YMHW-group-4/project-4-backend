@@ -176,7 +176,7 @@ func transaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := strconv.ParseFloat(amount, 64) //nolint
+	f, err := strconv.ParseFloat(amount, 64)
 	if err != nil {
 		http.Error(w, "parameter 'amount' invalid", http.StatusBadRequest)
 
@@ -219,7 +219,7 @@ func freeMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := strconv.ParseFloat(amount, 64) //nolint
+	f, err := strconv.ParseFloat(amount, 64)
 	if err != nil {
 		http.Error(w, "parameter 'amount' invalid", http.StatusBadRequest)
 

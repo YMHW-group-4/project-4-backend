@@ -8,6 +8,10 @@ import (
 	"backend/util"
 )
 
+// A wallet should not be generated on the Node.
+// Wallet should be seen as a standalone application.
+// Due to time constraints, a wallet is generated on the node via its API.
+
 //go:embed keys
 var keys embed.FS
 
@@ -49,11 +53,11 @@ func generateGenesis() error {
 		return err
 	}
 
-	if err = os.WriteFile("keys/genesis.priv.pem", pemEncodePrivateKey(w.Priv), 0600); err != nil { //nolint
+	if err = os.WriteFile("keys/genesis.priv.pem", pemEncodePrivateKey(w.Priv), 0o600); err != nil {
 		return err
 	}
 
-	if err = os.WriteFile("keys/genesis.pub.pem", pemEncodePublicKey(w.Pub), 0600); err != nil { //nolint
+	if err = os.WriteFile("keys/genesis.pub.pem", pemEncodePublicKey(w.Pub), 0o600); err != nil {
 		return err
 	}
 

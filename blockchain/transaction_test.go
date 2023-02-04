@@ -27,6 +27,6 @@ func TestTransactionTestSuite(t *testing.T) {
 
 func (suite *TransactionTestSuite) TestTransactionSignature() {
 	sig, _ := ecdsa.SignASN1(rand.Reader, suite.priv, []byte("signature"))
-	
+
 	assert.True(suite.T(), ecdsa.VerifyASN1(suite.pub, []byte("signature"), sig))
 }

@@ -10,7 +10,7 @@ import (
 func TestAccountModelFromBlock(t *testing.T) {
 	am := newAccountModel()
 
-	_ = am.add("genesis", 10000) //nolint
+	_ = am.add("genesis", 10000)
 
 	var blocks []Block
 

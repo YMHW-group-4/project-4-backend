@@ -48,7 +48,7 @@ func newMasterKey(seed []byte) (*bip32.Key, error) {
 // source: https://gist.github.com/miguelmota/f56fa0b01e8c6c649a6c4f0ee7337aab
 func deriveECDSA(master *bip32.Key) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	// derive ECDSA according to the bip44 specification (m/44)
-	key, err := master.NewChildKey(2147483648 + 44) //nolint
+	key, err := master.NewChildKey(2147483648 + 44)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -70,12 +70,12 @@ func deriveECDSA(master *bip32.Key) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error)
 
 // NewKeyPair creates a new keypair.
 func NewKeyPair(mnemonic string, password string) (string, *ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	var m = mnemonic
+	m := mnemonic
 
 	var err error
 
 	if len(strings.TrimSpace(m)) == 0 {
-		m, err = generateMnemonic(256) //nolint
+		m, err = generateMnemonic(256)
 		if err != nil {
 			return "", nil, nil, err
 		}

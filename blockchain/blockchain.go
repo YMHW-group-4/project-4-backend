@@ -1,8 +1,6 @@
 package blockchain
 
 import (
-	"backend/util"
-	"backend/wallet"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/hex"
@@ -11,6 +9,9 @@ import (
 	"math"
 	"os"
 	"time"
+
+	"backend/util"
+	"backend/wallet"
 
 	"github.com/rs/zerolog/log"
 )
@@ -233,7 +234,7 @@ func (b *Blockchain) DumpJSON() error {
 		return err
 	}
 
-	if err = os.WriteFile(dumpFile, data, 0600); err != nil { //nolint
+	if err = os.WriteFile(dumpFile, data, 0o600); err != nil {
 		return err
 	}
 

@@ -26,8 +26,8 @@ func getConfigFromEnv() Configuration {
 
 	return Configuration{
 		Debug:    util.GetEnv("DEBUG", false),
-		Port:     util.GetEnv("PORT", 30333),    //nolint
-		APIPort:  util.GetEnv("API_PORT", 8080), //nolint
+		Port:     util.GetEnv("PORT", 30333),
+		APIPort:  util.GetEnv("API_PORT", 8080),
 		Interval: interval,
 		Seed:     util.GetEnv("DNS_SEED", ""),
 	}

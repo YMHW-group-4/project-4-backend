@@ -110,10 +110,10 @@ func TestNonEqualTreeRoots(t *testing.T) {
 func TestEqualTreeRootsSerialized(t *testing.T) {
 	var b Block
 
-	block, _ := createBlock("", []byte(""), transactions) //nolint
+	block, _ := createBlock("", []byte(""), transactions)
 
-	s, _ := json.Marshal(block) //nolint
-	_ = json.Unmarshal(s, &b)   //nolint
+	s, _ := json.Marshal(block)
+	_ = json.Unmarshal(s, &b)
 
 	data := hashTransactions(transactions)
 	sData := hashTransactions(b.Transactions)
@@ -123,6 +123,7 @@ func TestEqualTreeRootsSerialized(t *testing.T) {
 
 	assert.Equal(t, tr1.root.hash, tr2.root.hash)
 }
+
 func TestNewMerkleNode(t *testing.T) {
 	data := [][]byte{
 		[]byte("node1"),

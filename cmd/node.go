@@ -165,7 +165,7 @@ func (n *Node) setup() {
 	n.wg.Add(1)
 
 	// wait for replies
-	time.AfterFunc(5*time.Second, func() { //nolint
+	time.AfterFunc(5*time.Second, func() {
 		defer n.wg.Done()
 
 		b := make([]blockchain.Block, 0)

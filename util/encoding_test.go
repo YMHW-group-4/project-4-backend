@@ -26,7 +26,7 @@ type testStruct struct {
 }
 
 func (suite *EncodingTestSuite) TestJSONEncode() {
-	data1, _ := json.Marshal(suite.json) //nolint
+	data1, _ := json.Marshal(suite.json)
 	data2 := JSONEncode(suite.json)
 
 	suite.Equal(data1, data2)
@@ -35,10 +35,10 @@ func (suite *EncodingTestSuite) TestJSONEncode() {
 func (suite *EncodingTestSuite) TestJSONDecode() {
 	var t1, t2 testStruct
 
-	data1, _ := json.Marshal(suite.json) //nolint
+	data1, _ := json.Marshal(suite.json)
 	data2 := JSONEncode(suite.json)
 
-	_ = json.Unmarshal(data1, &t1) //nolint
+	_ = json.Unmarshal(data1, &t1)
 
 	JSONDecode(data2, &t2)
 

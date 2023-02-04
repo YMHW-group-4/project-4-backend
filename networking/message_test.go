@@ -49,11 +49,11 @@ func TestMarshalType(t *testing.T) {
 		},
 	}
 
-	data, _ := json.Marshal(bus) //nolint
+	data, _ := json.Marshal(bus)
 
 	msg, _ := NewMessage("peer", Transaction, data)
-	_ = json.Unmarshal(msg, &m)       //nolint
-	_ = json.Unmarshal(m.Payload, &b) //nolint
+	_ = json.Unmarshal(msg, &m)
+	_ = json.Unmarshal(m.Payload, &b)
 
 	assert.Equal(t, bus, b)
 }
