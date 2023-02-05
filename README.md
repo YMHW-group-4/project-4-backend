@@ -48,7 +48,7 @@ cd project-4-backend/
 
 ### Install dependencies
 
-```shell
+```
 $ make deps
 ```
 
@@ -56,7 +56,7 @@ $ make deps
 
 The project can be build for multiple platforms:
 
-```shell
+```
 $ make build_amd64    # Linux AMD64 binary
 $ make build_arm64v8  # Linux arm (armv8) binary
 $ make build_windows  # Windows binary
@@ -64,13 +64,13 @@ $ make build_windows  # Windows binary
 
 To build for the current platform use:
 
-```shell
+```
 $ make build
 ```
 
 To build for all platforms use:
 
-```shell
+```
 $ make build_all
 ```
 
@@ -78,26 +78,26 @@ $ make build_all
 
 Unit tests can be run by using the command:
 
-```shell
+```
 $ make test
 ```
 
 ### Linter
 
 Various linters can be run to check the quality of the code.
-```shell
+```
 $ make lint
 ```
 
 To format the code, consider using the command:
-```shell
+```
 $ make format
 ```
 
 ### Docker
 
 A docker container can be made by either running the Dockerfile, or using the following commands:
-```shell
+```
 $ make docker_amd64     # Build amd64 docker container
 $ make docker_arm64v8   # Build arm64v8 docker container
 $ make docker_all       # Builds all containers
