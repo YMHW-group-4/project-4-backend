@@ -2,9 +2,10 @@ package blockchain
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"testing"
+
+	"backend/crypto"
+	"backend/wallet"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -17,8 +18,9 @@ type TransactionTestSuite struct {
 }
 
 func (suite *TransactionTestSuite) SetupTest() {
-	suite.priv, _ = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.pub = &suite.priv.PublicKey
+	_, priv, pub, _ := wallet.NewKeyPair("", "")
+	suite.priv = priv
+	suite.pub = pub
 }
 
 func TestTransactionTestSuite(t *testing.T) {
@@ -26,7 +28,7 @@ func TestTransactionTestSuite(t *testing.T) {
 }
 
 func (suite *TransactionTestSuite) TestTransactionSignature() {
-	sig, _ := ecdsa.SignASN1(rand.Reader, suite.priv, []byte("signature"))
+	sig, _ := crypto.Sign(suite.priv, []byte("signature"))
 
-	assert.True(suite.T(), ecdsa.VerifyASN1(suite.pub, []byte("signature"), sig))
+	assert.True(suite.T(), crypto.Verify(suite.pub, []byte("signature"), sig))
 }

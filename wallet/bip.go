@@ -4,7 +4,8 @@ import (
 	"crypto/ecdsa"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	"backend/crypto"
+
 	"github.com/mr-tron/base58"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
@@ -60,7 +61,7 @@ func deriveECDSA(master *bip32.Key) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error)
 
 	priv := decoded[46:78]
 
-	privECDSA, err := crypto.ToECDSA(priv)
+	privECDSA, err := crypto.DecodePrivateKey(priv)
 	if err != nil {
 		return nil, nil, err
 	}

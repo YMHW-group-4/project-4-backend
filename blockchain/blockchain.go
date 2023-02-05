@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"backend/crypto"
 	"backend/util"
 	"backend/wallet"
 
@@ -120,13 +121,14 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 	}
 
 	// check whether the signature is valid
-	key, err := wallet.DecodePublicKey(util.HexDecode(sender))
+	key, err := crypto.DecodePublicKey(util.HexDecode(sender))
 	if err != nil {
 		return Transaction{}, err
 	}
 
-	// FIXME
-	if !wallet.Verify(key, []byte(""), signature) {
+	hash := []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount))
+
+	if !crypto.Verify(key, hash, signature) {
 		return Transaction{}, fmt.Errorf("%w: invalid signature", errInvalidTransaction)
 	}
 

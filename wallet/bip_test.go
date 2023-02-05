@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"backend/crypto"
 	"testing"
 
 	"backend/util"
@@ -24,14 +25,14 @@ func TestSerializeKeys(t *testing.T) {
 
 	_, priv1, pub1, _ := NewKeyPair(m, "")
 
-	privHexEncoded := util.HexEncode(EncodePrivateKey(priv1))
-	pubHexEncoded := util.HexEncode(EncodePublicKey(pub1))
+	privHexEncoded := util.HexEncode(crypto.EncodePrivateKey(priv1))
+	pubHexEncoded := util.HexEncode(crypto.EncodePublicKey(pub1))
 
 	privHexDecoded := util.HexDecode(privHexEncoded)
 	pubHexDecoded := util.HexDecode(pubHexEncoded)
 
-	priv2, _ := DecodePrivateKey(privHexDecoded)
-	pub2, _ := DecodePublicKey(pubHexDecoded)
+	priv2, _ := crypto.DecodePrivateKey(privHexDecoded)
+	pub2, _ := crypto.DecodePublicKey(pubHexDecoded)
 
 	assert.Equal(t, priv1, priv2)
 	assert.Equal(t, pub1, pub2)

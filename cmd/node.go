@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"backend/blockchain"
+	"backend/consensus"
 	"backend/errors"
 	"backend/networking"
 	"backend/util"
@@ -31,6 +32,7 @@ type Node struct {
 	interval   time.Duration
 	network    *networking.Network
 	blockchain *blockchain.Blockchain
+	pos        *consensus.ProofOfStake
 	wg         sync.WaitGroup
 	ready      chan struct{}
 	close      chan struct{}
@@ -53,6 +55,7 @@ func NewNode(config Configuration) (*Node, error) {
 		interval:   interval,
 		network:    net,
 		blockchain: blockchain.NewBlockchain(),
+		pos:        consensus.NewPoS(),
 		ready:      make(chan struct{}),
 		close:      make(chan struct{}),
 	}, nil
@@ -211,6 +214,10 @@ func (n *Node) schedule(interval time.Duration) error {
 		for {
 			select {
 			case <-ticker.C:
+				_, err := n.pos.Winner()
+				if err != nil {
+					log.Debug().Err(err).Msg("pos: failed to pick validator")
+				}
 
 				// TODO create new Block
 				// Proof of stake

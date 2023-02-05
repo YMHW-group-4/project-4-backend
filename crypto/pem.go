@@ -1,4 +1,4 @@
-package wallet
+package crypto
 
 import (
 	"crypto/ecdsa"
@@ -9,8 +9,8 @@ import (
 // errPemInvalidBlock is the error when a PEM block is invalid.
 var errPemInvalidBlock = errors.New("invalid block")
 
-// pemDecodePublicKey decodes a PEM-encoded ECDSA public key.
-func pemDecodePublicKey(key []byte) (*ecdsa.PublicKey, error) {
+// PemDecodePublicKey decodes a PEM-encoded ECDSA public key.
+func PemDecodePublicKey(key []byte) (*ecdsa.PublicKey, error) {
 	block, _ := pem.Decode(key)
 	if block == nil || block.Type != "PUBLIC KEY" {
 		return nil, errPemInvalidBlock
@@ -24,8 +24,8 @@ func pemDecodePublicKey(key []byte) (*ecdsa.PublicKey, error) {
 	return pub, nil
 }
 
-// pemDecodePrivateKey decodes a PEM-encoded ECDSA private key.
-func pemDecodePrivateKey(key []byte) (*ecdsa.PrivateKey, error) {
+// PemDecodePrivateKey decodes a PEM-encoded ECDSA private key.
+func PemDecodePrivateKey(key []byte) (*ecdsa.PrivateKey, error) {
 	var block *pem.Block
 
 	for {
@@ -48,8 +48,8 @@ func pemDecodePrivateKey(key []byte) (*ecdsa.PrivateKey, error) {
 	return priv, nil
 }
 
-// pemEncodePublicKey encodes an ECDSA public key to PEM format.
-func pemEncodePublicKey(key *ecdsa.PublicKey) []byte {
+// PemEncodePublicKey encodes an ECDSA public key to PEM format.
+func PemEncodePublicKey(key *ecdsa.PublicKey) []byte {
 	block := &pem.Block{
 		Type:  "PUBLIC KEY",
 		Bytes: EncodePublicKey(key),
@@ -58,8 +58,8 @@ func pemEncodePublicKey(key *ecdsa.PublicKey) []byte {
 	return pem.EncodeToMemory(block)
 }
 
-// pemEncodePrivateKey encodes an ECDSA private key to PEM format.
-func pemEncodePrivateKey(key *ecdsa.PrivateKey) []byte {
+// PemEncodePrivateKey encodes an ECDSA private key to PEM format.
+func PemEncodePrivateKey(key *ecdsa.PrivateKey) []byte {
 	keyBlock := &pem.Block{
 		Type:  "EC PRIVATE KEY",
 		Bytes: EncodePrivateKey(key),

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -112,7 +113,7 @@ func (a *API) Register() {
 
 	url := fmt.Sprintf("%s/register_node?host=%s&port=%s", a.seed, getOutboundIP(), a.server.Addr)
 
-	if _, err := http.Get(url); err != nil {
+	if _, err := http.Post(url, "application/json", bytes.NewBuffer([]byte(""))); err != nil {
 		log.Debug().Err(err).Msg("api: failed to register to DNS seed")
 
 		return
@@ -245,6 +246,7 @@ func freeMoney(w http.ResponseWriter, r *http.Request) {
 }
 
 // wallets creates and returns a new wallet to the caller.
+// this should not be done on the node itself; see wallet package.
 func wallets(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Access-Control-Allow-Methods", "GET")
@@ -260,7 +262,7 @@ func wallets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(wa); err != nil { // FIXME
+	if err = json.NewEncoder(w).Encode(wa); err != nil { // FIXME does not return a string
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return

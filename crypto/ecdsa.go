@@ -1,20 +1,25 @@
-package wallet
+package crypto
 
 import (
+	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Sign signs a hash using the private key.
-func Sign(priv *ecdsa.PrivateKey, hash []byte) ([]byte, error) {
-	return ecdsa.SignASN1(rand.Reader, priv, hash)
+func Sign(priv *ecdsa.PrivateKey, data []byte) ([]byte, error) {
+	return crypto.Sign(crypto.Keccak256Hash(data).Bytes(), priv)
 }
 
 // Verify checks whether the signature is valid.
 func Verify(pub *ecdsa.PublicKey, hash []byte, sig []byte) bool {
-	return ecdsa.VerifyASN1(pub, hash, sig)
+	ecrecover, err := crypto.Ecrecover(crypto.Keccak256Hash(hash).Bytes(), sig)
+	if err != nil {
+		return false
+	}
+
+	return bytes.Equal(ecrecover, EncodePublicKey(pub))
 }
 
 // EncodePublicKey encodes a public key.

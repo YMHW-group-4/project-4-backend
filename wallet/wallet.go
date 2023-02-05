@@ -5,6 +5,7 @@ import (
 	"embed"
 	"os"
 
+	"backend/crypto"
 	"backend/util"
 )
 
@@ -38,12 +39,12 @@ func CreateWallet(mnemonic string, password string) (*Wallet, error) {
 
 // Public returns the public key formatted as a string.
 func (w *Wallet) Public() string {
-	return util.HexEncode(EncodePublicKey(w.Pub))
+	return util.HexEncode(crypto.EncodePublicKey(w.Pub))
 }
 
 // Private returns the private key formatted as a string.
 func (w *Wallet) Private() string {
-	return util.HexEncode(EncodePrivateKey(w.Priv))
+	return util.HexEncode(crypto.EncodePrivateKey(w.Priv))
 }
 
 // generateGenesis generates a new keypair for genesis.
@@ -53,11 +54,11 @@ func generateGenesis() error {
 		return err
 	}
 
-	if err = os.WriteFile("keys/genesis.priv.pem", pemEncodePrivateKey(w.Priv), 0o600); err != nil {
+	if err = os.WriteFile("keys/genesis.priv.pem", crypto.PemEncodePrivateKey(w.Priv), 0o600); err != nil {
 		return err
 	}
 
-	if err = os.WriteFile("keys/genesis.pub.pem", pemEncodePublicKey(w.Pub), 0o600); err != nil {
+	if err = os.WriteFile("keys/genesis.pub.pem", crypto.PemEncodePublicKey(w.Pub), 0o600); err != nil {
 		return err
 	}
 
@@ -76,12 +77,12 @@ func GenesisWallet() (*Wallet, error) {
 		return nil, err
 	}
 
-	privKey, err := pemDecodePrivateKey(priv)
+	privKey, err := crypto.PemDecodePrivateKey(priv)
 	if err != nil {
 		return nil, err
 	}
 
-	pubKey, err := pemDecodePublicKey(pub)
+	pubKey, err := crypto.PemDecodePublicKey(pub)
 	if err != nil {
 		return nil, err
 	}
