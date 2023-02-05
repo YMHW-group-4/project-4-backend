@@ -29,6 +29,6 @@ func getConfigFromEnv() Configuration {
 		Port:     util.GetEnv("PORT", 30333),
 		APIPort:  util.GetEnv("API_PORT", 8080),
 		Interval: interval,
-		Seed:     util.GetEnv("DNS_SEED", ""),
+		Seed:     util.GetEnv("DNS_SEED", "localhost:3000"),
 	}
 }

@@ -99,6 +99,10 @@ func (am *accountModel) exists(key string) bool {
 	am.RLock()
 	defer am.RUnlock()
 
+	if len(key) == 0 {
+		return false
+	}
+
 	_, ok := am.accounts[key]
 
 	return ok
@@ -108,10 +112,6 @@ func (am *accountModel) exists(key string) bool {
 func (am *accountModel) add(key string, balance float64) error {
 	if am.exists(key) {
 		return errors.ErrInvalidOperation("key already exists")
-	}
-
-	if len(key) == 0 {
-		return errors.ErrInvalidOperation("empty key")
 	}
 
 	// this should not happen
@@ -134,10 +134,6 @@ func (am *accountModel) add(key string, balance float64) error {
 func (am *accountModel) update(key string, amount float64) error {
 	if !am.exists(key) {
 		return errors.ErrInvalidOperation("key does not exist")
-	}
-
-	if len(key) == 0 {
-		return errors.ErrInvalidOperation("empty key")
 	}
 
 	// this should not happen

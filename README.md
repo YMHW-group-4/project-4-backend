@@ -3,11 +3,105 @@
 [![go](https://github.com/YMHW-group-4/project-4-backend/actions/workflows/build.yml/badge.svg)](https://github.com/YMHW-group-4/project-4-backend/actions/workflows/build.yml)
 
 # Project-4
-This is the repository for the project of year 4. The project is about creating a cryptocurrency. Created by group 4
+This is the repository for the cryptonode of the project of year 4. The project is about creating a cryptocurrency. 
+This project is created by Group 4.
 
 ## Requirements
 - Docker
 - Go 1.19
 
-## Getting Started
+## Configuration
+
+Configuring the node can be done by using enviroment variables:
+
+* `"DEBUG", "false"` Sets log level to debug.
+* `"PORT", "30333"` Sets the port for the node.
+* `"API_PORT", "8080"` Sets the API port.
+* `"DNS_SEED", "localhost:3000"` Sets the address of the DNS seed
+* `"INTERVAL", "10m"` Sets the interval of the scheduler.
+
+To set multiple enviroments variables on a local machine (when not using a supervisor or docker)
+a file that specifies all the enviroment variables can be made. For example a file `node.env` can be created, 
+and within this file multiple enviroment variables can be set.
+
+```dotenv
+DEBUG=true
+INTERVAL=20m15s
+```
+
+The variables can be set by executing the following command:
+```shell
+$ export $(cat node.env | xargs)
+```
+
+When the node will be launched, it will use the enviroment variables that have been set.
+
+
+## Development
+
+### Cloning
+
+```shell
+git clone git@github.com:YMHW-group-4/project-4-backend.git
+cd project-4-backend/
+```
+
+### Install dependencies
+
+```shell
+$ make deps
+```
+
+### Building
+
+The project can be build for multiple platforms:
+
+```shell
+$ make build_amd64    # Linux AMD64 binary
+$ make build_arm64v8  # Linux arm (armv8) binary
+$ make build_windows  # Windows binary
+```
+
+To build for the current platform use:
+
+```shell
+$ make build
+```
+
+To build for all platforms use:
+
+```shell
+$ make build_all
+```
+
+### Unit test
+
+Unit tests can be run by using the command:
+
+```shell
+$ make test
+```
+
+### Linter
+
+Various linters can be run to check the quality of the code.
+```shell
+$ make lint
+```
+
+To format the code, consider using the command:
+```shell
+$ make format
+```
+
+### Docker
+
+A docker container can be made by either running the Dockerfile, or using the following commands:
+```shell
+$ make docker_amd64     # Build amd64 docker container
+$ make docker_arm64v8   # Build arm64v8 docker container
+$ make docker_all       # Builds all containers
+```
+
+
 
