@@ -88,7 +88,7 @@ Various linters can be run to check the quality of the code.
 $ make lint
 ```
 
-To format the code, consider using the command:
+The code can be formatted by using:
 ```
 $ make format
 ```
