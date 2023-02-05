@@ -1,8 +1,6 @@
 package blockchain
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -12,8 +10,6 @@ import (
 
 	"backend/crypto"
 	"backend/util"
-	"backend/wallet"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -174,19 +170,19 @@ func (b *Blockchain) CreateTransaction(sender string, receiver string, signature
 func (b *Blockchain) createGenesis(validator string) error {
 	log.Debug().Msg("blockchain: creating genesis block")
 
-	genesis, err := wallet.GenesisWallet()
+	priv, pub, err := crypto.Genesis()
 	if err != nil {
 		return err
 	}
 
-	sign, err := ecdsa.SignASN1(rand.Reader, genesis.Priv, []byte("genesis"))
+	sign, err := crypto.Sign(priv, []byte("genesis"))
 	if err != nil {
 		return err
 	}
 
 	t := Transaction{
-		Sender:    genesis.Private(),
-		Receiver:  genesis.Public(),
+		Sender:    util.HexEncode(crypto.EncodePublicKey(pub)),
+		Receiver:  util.HexEncode(crypto.EncodePublicKey(pub)),
 		Signature: util.HexEncode(sign),
 		Amount:    math.MaxUint64,
 		Nonce:     0,

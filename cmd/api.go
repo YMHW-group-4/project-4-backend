@@ -24,6 +24,8 @@ import (
 // Moving the API here until rewrite.
 // Spoiler: refactoring will not be done.
 
+// Note: params should be passed in the body instead of the URL.
+
 var errInvalidHost = errors.New("invalid host")
 
 // API represents the HTTP API.
@@ -255,14 +257,17 @@ func wallets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wa, err := wallet.CreateWallet("", "") // FIXME placeholder
+	mnemonic := strings.TrimSpace(r.URL.Query().Get("mnemonic"))
+	password := strings.TrimSpace(r.URL.Query().Get("password"))
+
+	wal, err := wallet.CreateWallet(mnemonic, password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(wa); err != nil { // FIXME does not return a string
+	if err = json.NewEncoder(w).Encode(wal); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
