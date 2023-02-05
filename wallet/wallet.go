@@ -18,7 +18,7 @@ type Wallet struct {
 
 // CreateWallet creates a new Wallet.
 func CreateWallet(mnemonic string, password string) (*Wallet, error) {
-	m, priv, pub, err := newKeyPair(mnemonic, password)
+	m, priv, pub, err := NewKeyPair(mnemonic, password)
 	if err != nil {
 		return nil, err
 	}

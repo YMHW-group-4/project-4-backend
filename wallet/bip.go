@@ -69,8 +69,8 @@ func deriveECDSA(master *bip32.Key) (*ecdsa.PrivateKey, *ecdsa.PublicKey, error)
 	return privECDSA, &privECDSA.PublicKey, nil
 }
 
-// newKeyPair creates a new keypair.
-func newKeyPair(mnemonic string, password string) (string, *ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
+// NewKeyPair creates a new keypair.
+func NewKeyPair(mnemonic string, password string) (string, *ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
 	m := mnemonic
 
 	var err error
