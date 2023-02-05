@@ -1,9 +1,9 @@
 package wallet
 
 import (
-	"backend/crypto"
 	"testing"
 
+	"backend/crypto"
 	"backend/util"
 
 	"github.com/stretchr/testify/assert"
