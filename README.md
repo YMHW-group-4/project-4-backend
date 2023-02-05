@@ -34,7 +34,7 @@ The variables can be set by executing the following command:
 $ export $(cat node.env | xargs)
 ```
 
-When the node will be launched, it will use the enviroment variables that have been set.
+When the node is launched, it will use the enviroment variables that have been set.
 
 ## Development
 
