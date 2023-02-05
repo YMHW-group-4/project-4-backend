@@ -17,14 +17,14 @@ Configuring the node can be done by using enviroment variables:
 * `"DEBUG", "false"` Sets log level to debug.
 * `"PORT", "30333"` Sets the port for the node.
 * `"API_PORT", "8080"` Sets the API port.
-* `"DNS_SEED", "localhost:3000"` Sets the address of the DNS seed
+* `"DNS_SEED", "localhost:3000"` Sets the address of the DNS seed.
 * `"INTERVAL", "10m"` Sets the interval of the scheduler.
 
-To set multiple enviroments variables on a local machine (when not using a supervisor or docker)
+To set multiple enviroments variables on a local machine (when not using a supervisor, or docker)
 a file that specifies all the enviroment variables can be made. For example a file `node.env` can be created, 
 and within this file multiple enviroment variables can be set.
 
-```dotenv
+```env
 DEBUG=true
 INTERVAL=20m15s
 ```
@@ -35,7 +35,6 @@ $ export $(cat node.env | xargs)
 ```
 
 When the node will be launched, it will use the enviroment variables that have been set.
-
 
 ## Development
 
