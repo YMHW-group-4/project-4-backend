@@ -16,7 +16,7 @@ func TestUnmarshalJSON(t *testing.T) {
 		Payload: []byte("message"),
 	}
 
-	msg, _ := NewMessage("peer", Transaction, []byte("message"))
+	msg, _ := json.Marshal(NewMessage("peer", Transaction, []byte("message")))
 	_ = json.Unmarshal(msg, &m)
 
 	assert.Equal(t, message, m)
@@ -51,7 +51,7 @@ func TestMarshalType(t *testing.T) {
 
 	data, _ := json.Marshal(bus)
 
-	msg, _ := NewMessage("peer", Transaction, data)
+	msg, _ := json.Marshal(NewMessage("peer", Transaction, data))
 	_ = json.Unmarshal(msg, &m)
 	_ = json.Unmarshal(m.Payload, &b)
 

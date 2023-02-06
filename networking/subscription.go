@@ -20,6 +20,8 @@ const (
 	Block       Topic = "block"
 	Blockchain  Topic = "blockchain"
 	Consensus   Topic = "consensus"
+	Stake       Topic = "stake"
+	Validator   Topic = "validator"
 )
 
 // Subscription represents a Subscription within the Network.

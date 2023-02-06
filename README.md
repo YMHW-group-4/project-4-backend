@@ -18,7 +18,7 @@ Configuring the node can be done by using enviroment variables:
 * `"PORT", "30333"` Sets the port for the node.
 * `"API_PORT", "8080"` Sets the API port.
 * `"DNS_SEED", "localhost:3000"` Sets the address of the DNS seed.
-* `"INTERVAL", "10m"` Sets the interval of the scheduler.
+* `"INTERVAL", "20m"` Sets the interval of the scheduler.
 
 To set multiple enviroments variables on a local machine (when not using a supervisor, or docker)
 a file that specifies all the enviroment variables can be made. For example a file `node.env` can be created, 

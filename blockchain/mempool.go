@@ -44,7 +44,7 @@ func (mp *mempool) add(transaction ...Transaction) error {
 	var err error
 
 	for _, tx := range transaction {
-		key := tx.string()
+		key := tx.String()
 
 		if mp.exists(key) {
 			err = errors.ErrInvalidOperation(fmt.Sprintf("key %s already exists", key))
@@ -64,18 +64,18 @@ func (mp *mempool) add(transaction ...Transaction) error {
 
 // retrieve retrieves transactions from the mempool.
 // If an amount of zero is passed, all transactions in the mempool will be returned.
-func (mp *mempool) retrieve(amount uint16) []Transaction {
+func (mp *mempool) retrieve(amount uint32) []Transaction {
 	mp.RLock()
 	defer mp.RUnlock()
 
 	if amount == 0 {
-		amount = uint16(len(mp.pool))
+		amount = uint32(len(mp.pool))
 	}
 
 	transactions := make([]Transaction, 0, amount)
 
 	for _, transaction := range mp.pool {
-		if uint16(len(transactions)) == amount {
+		if uint32(len(transactions)) == amount {
 			break
 		}
 
@@ -90,7 +90,7 @@ func (mp *mempool) delete(transaction ...Transaction) error {
 	var err error
 
 	for _, tx := range transaction {
-		key := tx.string()
+		key := tx.String()
 
 		if !mp.exists(key) {
 			err = errors.ErrInvalidOperation(fmt.Sprintf("key %s does not exists", key))

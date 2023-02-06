@@ -18,10 +18,10 @@ type Configuration struct {
 // getConfigFromEnv retrieves configuration from the environment, if environment
 // is not set then default configuration will be given instead.
 func getConfigFromEnv() Configuration {
-	interval := util.GetEnv("INTERVAL", "10m")
+	interval := util.GetEnv("INTERVAL", "20m")
 
 	if _, err := time.ParseDuration(interval); err != nil {
-		interval = "10m"
+		interval = "20m"
 	}
 
 	return Configuration{

@@ -1,6 +1,7 @@
 package networking
 
 import (
+	"backend/util"
 	"context"
 	"fmt"
 	"sync"
@@ -98,14 +99,9 @@ func (n *Network) ConnectedPeers() int {
 
 // Publish publishes a Message to given Topic.
 func (n *Network) Publish(topic Topic, payload []byte) {
-	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
-	if err != nil {
-		log.Error().Err(err).Msg("network: failed to create message")
+	msg := util.JSONEncode(NewMessage(n.Host.ID().String(), topic, payload))
 
-		return
-	}
-
-	if err = n.Subs[topic].Publish(msg); err != nil {
+	if err := n.Subs[topic].Publish(msg); err != nil {
 		log.Error().Err(err).Msg("network: failed to publish message")
 
 		return
@@ -135,12 +131,7 @@ func (n *Network) Reply(node string, topic Topic, payload []byte) {
 		return
 	}
 
-	msg, err := NewMessage(n.Host.ID().String(), topic, payload)
-	if err != nil {
-		log.Error().Err(err).Msg("network: failed to create message")
-
-		return
-	}
+	msg := util.JSONEncode(NewMessage(n.Host.ID().String(), topic, payload))
 
 	if _, err = s.Write(msg); err != nil {
 		log.Error().Err(err).Msg("network: failed to write message")
@@ -188,7 +179,7 @@ func (n *Network) startMdns() error {
 
 // setupSubscriptions starts and listens to all Subscriptions.
 func (n *Network) setupSubscriptions() error {
-	for _, top := range []Topic{Transaction, Block, Blockchain} {
+	for _, top := range []Topic{Transaction, Block, Blockchain, Consensus, Stake, Validator} {
 		sub, err := NewSubscription(n.ctx, n.ps, n.Host.ID(), top)
 		if err != nil {
 			return err

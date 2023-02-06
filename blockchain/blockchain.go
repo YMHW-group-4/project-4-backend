@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -52,125 +51,41 @@ func (b *Blockchain) Init(validator string, blocks []Block) {
 
 // AddBlock adds a new block to the blockchain.
 func (b *Blockchain) AddBlock(block Block, validator string) {
-	if err := block.validate(b.Blocks[len(b.Blocks)-1], validator); err != nil {
+	if err := block.Validate(b.Blocks[len(b.Blocks)-1], validator); err != nil {
 		log.Error().Err(err).Msg("blockchain: block is invalid")
 
 		return
 	}
 
+	for _, t := range block.Transactions {
+		if err := b.UpdateAccountModel(t.Receiver, t.Amount); err != nil {
+			log.Debug().Err(err).Msg("failed to update account")
+		}
+	}
+
+	if err := b.mp.delete(block.Transactions...); err != nil {
+		log.Debug().Err(err).Msg("failed to remove transactions")
+	}
+
+	log.Info().Str("validator", validator).Msg("blockchain: added new block")
+
 	b.Blocks = append(b.Blocks, block)
 }
 
 // CreateBlock creates a new block.
-func (b *Blockchain) CreateBlock(validator string, amount uint16) (Block, error) {
+func (b *Blockchain) CreateBlock(validator string, amount uint32) (Block, error) {
 	transactions := b.mp.retrieve(amount)
 
-	block, err := createBlock(validator, b.Blocks[len(b.Blocks)-1].hash(), transactions)
+	block, err := newBlock(validator, b.Blocks[len(b.Blocks)-1].Hash(), transactions)
 	if err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to create block")
-
 		return Block{}, err
-	}
-
-	if err = b.mp.delete(transactions...); err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to delete transactions")
-
-		return Block{}, nil
 	}
 
 	return block, nil
 }
 
-// AddTransaction adds a new transaction to the memory pool.
-func (b *Blockchain) AddTransaction(transaction Transaction) {
-	if err := b.mp.add(transaction); err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to add transaction")
-
-		return
-	}
-
-	// update the account of the sender
-	if err := b.am.update(transaction.Sender, -transaction.Amount); err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to update account model")
-
-		return
-	}
-
-	// update or add the account of the receiver
-	if err := b.am.update(transaction.Receiver, transaction.Amount); err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to update account model")
-	} else if err = b.am.add(transaction.Receiver, transaction.Amount); err != nil {
-		log.Error().Err(err).Msg("blockchain: failed to add account to account model")
-	}
-}
-
-// CreateTransaction creates a new transaction.
-func (b *Blockchain) CreateTransaction(sender string, receiver string, signature []byte, amount float64) (Transaction, error) {
-	// check if sender exists
-	tx, err := b.am.get(sender)
-	if err != nil {
-		return Transaction{}, err
-	}
-
-	// check if sender has sufficient funds
-	if amount > tx.Balance.Float64() || 0 > amount {
-		return Transaction{}, fmt.Errorf("%w: insufficient funds", errInvalidTransaction)
-	}
-
-	// check whether the signature is valid
-	key, err := crypto.DecodePublicKey(util.HexDecode(sender))
-	if err != nil {
-		return Transaction{}, err
-	}
-
-	hash := []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount))
-
-	if !crypto.Verify(key, hash, signature) {
-		return Transaction{}, fmt.Errorf("%w: invalid signature", errInvalidTransaction)
-	}
-
-	// create transaction
-	t := Transaction{
-		Sender:    sender,
-		Receiver:  receiver,
-		Signature: hex.EncodeToString(signature),
-		Amount:    amount,
-		Nonce:     tx.Transactions,
-		Timestamp: time.Now().Unix(),
-	}
-
-	if b.mp.exists(t.string()) {
-		return Transaction{}, fmt.Errorf("%w: duplicate transaction", errInvalidTransaction)
-	}
-
-	// update the account of the sender
-	if err = b.am.update(sender, -amount); err != nil {
-		return Transaction{}, err
-	}
-
-	// update or add the account of the receiver
-	if b.am.exists(receiver) {
-		if err = b.am.update(receiver, amount); err != nil {
-			return Transaction{}, err
-		}
-	} else {
-		if err = b.am.add(receiver, amount); err != nil {
-			return Transaction{}, err
-		}
-	}
-
-	// add transaction to memory pool
-	if err = b.mp.add(t); err != nil {
-		return Transaction{}, err
-	}
-
-	return t, nil
-}
-
 // createGenesis creates the genesis block.
 func (b *Blockchain) createGenesis(validator string) error {
-	log.Debug().Msg("blockchain: creating genesis block")
-
 	priv, pub, err := crypto.Genesis()
 	if err != nil {
 		return err
@@ -185,17 +100,20 @@ func (b *Blockchain) createGenesis(validator string) error {
 		Sender:    util.HexEncode(crypto.EncodePublicKey(pub)),
 		Receiver:  util.HexEncode(crypto.EncodePublicKey(pub)),
 		Signature: util.HexEncode(sign),
-		Amount:    math.MaxUint64,
+		Amount:    ToCoin(math.MaxUint64).Float64(),
 		Nonce:     0,
 		Timestamp: time.Now().Unix(),
+		Type:      Exchange,
 	}
 
-	block, err := createBlock(validator, []byte(""), []Transaction{t})
+	block, err := newBlock(validator, []byte(""), []Transaction{t})
 	if err != nil {
 		return err
 	}
 
 	b.Blocks = append(b.Blocks, block)
+
+	log.Debug().Msg("blockchain: created genesis block")
 
 	return nil
 }
@@ -209,14 +127,43 @@ func (b *Blockchain) FromFile() ([]Block, error) {
 		return nil, err
 	}
 
-	err = json.Unmarshal(data, &blockchain)
-	if err != nil {
+	util.JSONDecode(data, &blockchain)
+
+	if len(blockchain.Blocks) == 0 {
 		return nil, err
 	}
 
 	log.Debug().Msg("blockchain: reading from file")
 
 	return blockchain.Blocks, nil
+}
+
+// UpdateMempool tries to update or add to the memory pool.
+func (b *Blockchain) UpdateMempool(transaction Transaction) error {
+	if b.mp.exists(transaction.String()) {
+		return fmt.Errorf("%w: duplicate transaction", ErrInvalidTransaction)
+	}
+
+	if err := b.mp.add(transaction); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateAccountModel tries to update or add to the account model.
+func (b *Blockchain) UpdateAccountModel(key string, amount float64) error {
+	if b.am.exists(key) {
+		if err := b.am.update(key, amount); err != nil {
+			return err
+		}
+	} else {
+		if err := b.am.add(key, amount); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // GetAccount returns the account associated with the given key.
