@@ -2,7 +2,7 @@ version: "3.9"
 name: blockchain
 services:
   dns-seed:
-    image: ymhw/blockchain-dns-seed
+    image: ymhw/blockchain-dns-seed:latest
     ports:
       - "3000:3000"
     networks:
