@@ -432,7 +432,6 @@ func (n *Node) forge() {
 			v, _ := n.pos.GetStake(n.network.ID())
 			n.pos.Clear()
 			n.pos.Set(n.network.ID(), v.Float64())
-			log.Debug().Msgf("%s", v)
 
 			// reset responses
 			n.pos.Responses = make([]consensus.Resp, 0)
@@ -493,7 +492,6 @@ func (n *Node) listen() {
 					v, _ := n.pos.GetStake(n.network.ID())
 					n.pos.Clear()
 					n.pos.Set(n.network.ID(), v.Float64())
-					log.Debug().Msgf("%s", v)
 				}
 			case msg := <-net.Subs[networking.Blockchain].Messages: // blockchain
 				if len(n.blockchain.Blocks) > 0 {
