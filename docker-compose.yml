@@ -1,11 +1,25 @@
 version: "3.9"
 name: blockchain
 services:
+  dns-seed:
+    image: ymhw/blockchain-dns-seed
+    ports:
+      - "3000:3000"
+    networks:
+      net:
+        ipv4_address: 172.20.0.60
   node-amd64:
     image: ymhw/blockchain-node-amd64:latest
     environment:
-      PORT: 30333
-      DEBUG: false
-      API_PORT: 8080
+      DNS_SEED: "http://172.20.0.60:3000"
     deploy:
       replicas: 16
+    networks:
+      - net
+
+networks:
+  net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
