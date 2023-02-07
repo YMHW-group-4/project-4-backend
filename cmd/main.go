@@ -63,7 +63,7 @@ func main() {
 
 	api.Start()
 
-	node.HandleSigterm()
+	node.handleSigterm()
 
 	api.Stop()
 }

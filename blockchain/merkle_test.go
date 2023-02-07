@@ -110,7 +110,7 @@ func TestNonEqualTreeRoots(t *testing.T) {
 func TestEqualTreeRootsSerialized(t *testing.T) {
 	var b Block
 
-	block, _ := createBlock("", []byte(""), transactions)
+	block, _ := newBlock("", []byte(""), transactions)
 
 	s, _ := json.Marshal(block)
 	_ = json.Unmarshal(s, &b)

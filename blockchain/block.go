@@ -2,10 +2,11 @@ package blockchain
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
+
+	"backend/util"
 )
 
 // errInvalidBlock is the base error when a block is invalid.
@@ -21,8 +22,8 @@ type Block struct {
 	Transactions []Transaction `json:"transactions"`
 }
 
-// createBlock creates a new Block.
-func createBlock(validator string, prevHash []byte, transactions []Transaction) (Block, error) {
+// newBlock creates a new Block.
+func newBlock(validator string, prevHash []byte, transactions []Transaction) (Block, error) {
 	if len(transactions) == 0 {
 		return Block{}, fmt.Errorf("%w: zero transactions", errInvalidBlock)
 	}
@@ -34,8 +35,8 @@ func createBlock(validator string, prevHash []byte, transactions []Transaction) 
 
 	return Block{
 		Validator:    validator,
-		MerkleRoot:   hex.EncodeToString(t.root.hash),
-		PrevHash:     hex.EncodeToString(prevHash),
+		MerkleRoot:   util.HexEncode(t.root.hash),
+		PrevHash:     util.HexEncode(prevHash),
 		Height:       uint64(len(transactions)),
 		Timestamp:    time.Now().Unix(),
 		Transactions: transactions,
@@ -47,18 +48,18 @@ func (b Block) string() string {
 	return fmt.Sprintf("%v", b)
 }
 
-// hash returns the hash of the Block.
-func (b Block) hash() []byte {
+// Hash returns the hash of the Block.
+func (b Block) Hash() []byte {
 	h := sha256.New()
 	h.Write([]byte(b.string()))
 
 	return h.Sum(nil)
 }
 
-// validate validates a singular Block.
-func (b Block) validate(last Block, validator string) error {
+// Validate validates a singular Block.
+func (b Block) Validate(last Block, validator string) error {
 	// compare hashes
-	if hex.EncodeToString(last.hash()) != b.PrevHash {
+	if util.HexEncode(last.Hash()) != b.PrevHash {
 		return fmt.Errorf("%w, %s", errInvalidBlock, "hash does not match")
 	}
 
@@ -70,6 +71,22 @@ func (b Block) validate(last Block, validator string) error {
 	// compare validator
 	if b.Validator != validator {
 		return fmt.Errorf("%w, %s", errInvalidBlock, "invalid validator")
+	}
+
+	// create new tree
+	tr, err := newMerkleTree(hashTransactions(b.Transactions))
+	if err != nil {
+		return fmt.Errorf("%w, %s", errInvalidBlock, "failed to create tree")
+	}
+
+	// compare merkle root
+	if util.HexEncode(tr.root.hash) != b.MerkleRoot {
+		return fmt.Errorf("%w, %s", errInvalidBlock, "merkle root does not match")
+	}
+
+	// compare height
+	if uint64(len(b.Transactions)) != b.Height {
+		return fmt.Errorf("%w, %s", errInvalidBlock, "height does not match")
 	}
 
 	return nil

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -17,6 +20,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/rs/zerolog/log"
 )
+
+// This file is a mess; refactoring should be done.
+// Today is not that day.
 
 // version is interpolated during build time.
 var version string
@@ -85,8 +91,125 @@ func (n *Node) Run() {
 		log.Fatal().Err(err).Msg("node: failed to start scheduler")
 	}
 
+	// set initial stake
+	n.pos.Set(n.network.ID(), 0)
+
 	// node done provisioning; set uptime for node
 	n.Uptime = time.Now()
+}
+
+// AddTransaction adds a new transaction to the memory pool.
+func (n *Node) AddTransaction(transaction blockchain.Transaction) error {
+	// check if sender exists
+	tx, err := n.blockchain.GetAccount(transaction.Sender)
+	if err != nil {
+		log.Debug().Err(err).Msg("node: could not find account")
+
+		return err
+	}
+
+	// check if sender has sufficient funds
+	if transaction.Amount > tx.Balance.Float64() || 0 > transaction.Amount {
+		log.Debug().Err(err).Msg("node: account has insufficient funds")
+
+		return fmt.Errorf("%w: insufficient funds", blockchain.ErrInvalidTransaction)
+	}
+
+	// validate signature
+	if err = transaction.Verify(); err != nil {
+		return err
+	}
+
+	// check if sender has sufficient funds
+	if transaction.Amount > tx.Balance.Float64() || 0 > transaction.Amount {
+		return fmt.Errorf("%w: insufficient funds", blockchain.ErrInvalidTransaction)
+	}
+
+	// update the memory pool
+	if err = n.blockchain.UpdateMempool(transaction); err != nil {
+		log.Debug().Err(err).Msg("node: could not add transaction to mempool")
+
+		return err
+	}
+
+	// update sender
+	if err = n.blockchain.UpdateAccountModel(transaction.Sender, -transaction.Amount); err != nil {
+		log.Debug().Err(err).Msg("node: could not update account")
+
+		return err
+	}
+
+	log.Debug().Msg("node: added transaction")
+
+	return nil
+}
+
+// CreateTransaction creates a new Transaction.
+func (n *Node) CreateTransaction(sender string, receiver string, signature []byte, amount float64, txType blockchain.TxType) (blockchain.Transaction, error) {
+	// check if sender exists
+	tx, err := n.blockchain.GetAccount(sender)
+	if err != nil {
+		log.Debug().Err(err).Msg("node: could not find account")
+
+		return blockchain.Transaction{}, err
+	}
+
+	// check if sender has sufficient funds
+	if amount > tx.Balance.Float64() || 0 > amount {
+		log.Debug().Err(err).Msg("node: account has insufficient funds")
+
+		return blockchain.Transaction{}, fmt.Errorf("%w: insufficient funds", blockchain.ErrInvalidTransaction)
+	}
+
+	// create transaction
+	t := blockchain.Transaction{
+		Sender:    sender,
+		Receiver:  receiver,
+		Signature: util.HexEncode(signature),
+		Amount:    blockchain.ToCoin(amount).Float64(),
+		Nonce:     tx.Transactions,
+		Timestamp: time.Now().Unix(),
+		Type:      txType,
+	}
+
+	// validate signature
+	if err = t.Verify(); err != nil {
+		log.Debug().Err(err).Msg("node: could not verify transaction")
+
+		return blockchain.Transaction{}, err
+	}
+
+	// update the memory pool
+	if err = n.blockchain.UpdateMempool(t); err != nil {
+		log.Debug().Err(err).Msg("node: could not add transaction to mempool")
+
+		return blockchain.Transaction{}, err
+	}
+
+	// set stake
+	if t.Type == blockchain.Stake {
+		n.pos.Transactions[t.String()] = struct{}{}
+
+		if err = n.pos.Update(n.network.ID(), t.Amount); err != nil {
+			log.Debug().Err(err).Msg("node: could not update stake")
+
+			return blockchain.Transaction{}, err
+		}
+	}
+
+	// update sender
+	if err = n.blockchain.UpdateAccountModel(t.Sender, -t.Amount); err != nil {
+		log.Debug().Err(err).Msg("node: could not update account")
+
+		return blockchain.Transaction{}, err
+	}
+
+	// publish message
+	n.network.Publish(networking.Transaction, util.JSONEncode(t))
+
+	log.Debug().Msg("node: created transaction")
+
+	return t, nil
 }
 
 // Stop tries to stop all running services of the Node.
@@ -132,8 +255,17 @@ func (n *Node) setStreamHandlers() {
 				blocks = append(blocks, b.Blocks)
 			}
 		case networking.Consensus:
-			// TODO
-		case networking.Block, networking.Transaction:
+			var r consensus.Resp
+
+			util.JSONDecode(message.Payload, &r)
+
+			n.pos.Responses = append(n.pos.Responses, r)
+		case networking.Stake:
+			if f, err := strconv.ParseFloat(string(message.Payload), 64); err == nil {
+				n.pos.Set(message.Peer, f)
+			}
+		case networking.Block, networking.Transaction, networking.Validator:
+			// ignore; requests are handled by the listener
 		}
 	})
 }
@@ -214,13 +346,25 @@ func (n *Node) schedule(interval time.Duration) error {
 		for {
 			select {
 			case <-ticker.C:
-				_, err := n.pos.Winner()
-				if err != nil {
-					log.Debug().Err(err).Msg("pos: failed to pick validator")
-				}
+				// request stake from other nodes
+				n.network.Request(networking.Stake)
 
-				// TODO create new Block
-				// Proof of stake
+				// wait for replies
+				time.AfterFunc(5*time.Second, func() {
+					validator, err := n.pos.Winner()
+					if err != nil {
+						// no stakers; new block will be created by this node
+						validator = n.network.ID()
+					}
+
+					// publish the node that will create the block
+					n.network.Publish(networking.Validator, []byte(validator))
+
+					// if this node is the validator; create block
+					if validator == n.network.ID() {
+						n.forge()
+					}
+				})
 			case <-n.close:
 				ticker.Stop()
 
@@ -234,12 +378,78 @@ func (n *Node) schedule(interval time.Duration) error {
 	return nil
 }
 
+// forge Forges a new block.
+func (n *Node) forge() {
+	// wait a bit before forging block
+	time.AfterFunc(5*time.Second, func() {
+		// create block with a max of 1000 transactions, returns an error if there are no transactions
+		block, err := n.blockchain.CreateBlock(n.network.ID(), 1000)
+		if err != nil {
+			log.Debug().Err(err).Msg("node: failed to create block")
+
+			return
+		}
+
+		n.network.Publish(networking.Consensus, util.JSONEncode(block))
+
+		// wait for (consensus) replies
+		time.AfterFunc(5*time.Second, func() {
+			responses := len(n.pos.Responses)
+			valid := 0
+
+			for _, v := range n.pos.Responses {
+				if bytes.Equal(block.Hash(), v.Data) {
+					if v.Valid {
+						valid++
+					}
+				}
+			}
+
+			value := 100
+
+			if responses != 0 {
+				value = valid / responses * 100
+			}
+
+			// hardcoded value; meaning that it will not pass if there are only two nodes
+			// should be done differently
+			if value >= 66 {
+				n.blockchain.AddBlock(block, n.network.ID())
+
+				for _, t := range block.Transactions {
+					if _, ok := n.pos.Transactions[t.String()]; ok {
+						if err = n.pos.Update(n.network.ID(), -t.Amount); err != nil {
+							log.Debug().Err(err).Msg("node: failed to update stake")
+						}
+						delete(n.pos.Transactions, t.String())
+					}
+				}
+
+				n.network.Publish(networking.Block, util.JSONEncode(block))
+			}
+
+			// reset stakers
+			v, _ := n.pos.GetStake(n.network.ID())
+			n.pos.Clear()
+			n.pos.Set(n.network.ID(), v.Float64())
+			log.Debug().Msgf("%s", v)
+
+			// reset responses
+			n.pos.Responses = make([]consensus.Resp, 0)
+
+			// remove validator
+			delete(n.pos.Validators, n.network.ID())
+		})
+	})
+}
+
 // reply sends a reply to another node using the network's Reply method.
 func (n *Node) reply(peer string, topic networking.Topic, payload []byte) {
 	n.network.Reply(peer, topic, payload)
 }
 
 // listen listens to incoming traffic from all nodes that this Node is connected to.
+// note: refactor this.
 func (n *Node) listen() {
 	n.wg.Add(1)
 
@@ -252,21 +462,74 @@ func (n *Node) listen() {
 			select {
 			case <-n.close:
 				return
-			case msg := <-net.Subs[networking.Transaction].Messages:
+			case msg := <-net.Subs[networking.Transaction].Messages: // transaction
 				var t blockchain.Transaction
 
 				util.JSONDecode(msg.Payload, &t)
 
-				n.blockchain.AddTransaction(t)
-			case msg := <-net.Subs[networking.Block].Messages:
+				if err := n.AddTransaction(t); err != nil {
+					log.Error().Err(err).Msg("node: failed to add transaction")
+				}
+			case msg := <-net.Subs[networking.Block].Messages: // block
 				var b blockchain.Block
 
 				util.JSONDecode(msg.Payload, &b)
 
-				n.blockchain.AddBlock(b, msg.Peer)
-			case msg := <-net.Subs[networking.Blockchain].Messages:
+				if _, ok := n.pos.Validators[msg.Peer]; ok {
+					delete(n.pos.Validators, msg.Peer)
+
+					n.blockchain.AddBlock(b, msg.Peer)
+
+					for _, t := range b.Transactions {
+						if _, ok := n.pos.Transactions[t.String()]; ok {
+							if err := n.pos.Update(n.network.ID(), -t.Amount); err != nil {
+								log.Debug().Err(err).Msg("node: failed to update stake")
+							}
+
+							delete(n.pos.Transactions, t.String())
+						}
+					}
+
+					v, _ := n.pos.GetStake(n.network.ID())
+					n.pos.Clear()
+					n.pos.Set(n.network.ID(), v.Float64())
+					log.Debug().Msgf("%s", v)
+				}
+			case msg := <-net.Subs[networking.Blockchain].Messages: // blockchain
 				if len(n.blockchain.Blocks) > 0 {
 					n.reply(msg.Peer, networking.Blockchain, util.JSONEncode(n.blockchain))
+				}
+			case msg := <-net.Subs[networking.Stake].Messages: // stake
+				if stk, err := n.pos.GetStake(n.network.ID()); err == nil {
+					n.network.Reply(msg.Peer, networking.Stake, util.JSONEncode(stk.Float64()))
+				}
+			case msg := <-net.Subs[networking.Consensus].Messages: // consensus
+				var b blockchain.Block
+
+				util.JSONDecode(msg.Payload, &b)
+
+				resp := &consensus.Resp{
+					Data:  b.Hash(),
+					Valid: false,
+				}
+
+				err := b.Validate(n.blockchain.Blocks[len(n.blockchain.Blocks)-1], msg.Peer)
+				if err != nil {
+					n.network.Reply(msg.Peer, networking.Consensus, util.JSONEncode(resp))
+
+					return
+				}
+
+				resp.Valid = true
+
+				n.network.Reply(msg.Peer, networking.Consensus, util.JSONEncode(resp))
+			case msg := <-net.Subs[networking.Validator].Messages: // validator
+				// append validator to array, to keep track of validators.
+				n.pos.Validators[string(msg.Payload)] = struct{}{}
+
+				// if this node is the validator; create block
+				if string(msg.Payload) == n.network.ID() {
+					n.forge()
 				}
 			}
 		}
@@ -275,10 +538,10 @@ func (n *Node) listen() {
 	log.Debug().Msg("node: listener started")
 }
 
-// HandleSigterm executes when termination from operating system is received.
+// handleSigterm executes when termination from operating system is received.
 // An attempt to gracefully shut down all required services of the node will be made.
 // Execution will block until signal has been received; executing thread will wait on channel.
-func (n *Node) HandleSigterm() {
+func (n *Node) handleSigterm() {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
 
