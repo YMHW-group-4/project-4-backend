@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
@@ -120,7 +119,7 @@ func (a *API) Register() {
 
 	url := fmt.Sprintf("%s/register_node?host=%s&port=%s", a.seed, getOutboundIP(), a.server.Addr)
 
-	if _, err := http.Post(url, "application/json", bytes.NewBuffer([]byte(""))); err != nil {
+	if _, err := http.Get(url); err != nil {
 		log.Error().Err(err).Msg("api: failed to register to DNS seed")
 
 		return
@@ -202,7 +201,7 @@ func transaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sig, err := signature(sender, receiver, f, priv)
+	sig, err := signature(priv)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -259,14 +258,12 @@ func freeMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sig, err := signature(sender, util.HexEncode(crypto.EncodePublicKey(pub)), f, priv)
+	sig, err := signature(priv)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
 	}
-
-	log.Debug().Msgf("%s", util.HexEncode(sig))
 
 	t, err := node.CreateTransaction(util.HexEncode(crypto.EncodePublicKey(pub)), sender, sig, f, blockchain.Exchange)
 	if err != nil {
@@ -319,7 +316,7 @@ func wallets(w http.ResponseWriter, r *http.Request) {
 func stake(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		w.Header().Set("Access-Control-Allow-Methods", "POST")
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 
@@ -344,7 +341,7 @@ func stake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sig, err := signature(sender, "", f, priv)
+	sig, err := signature(priv)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -369,8 +366,6 @@ func stake(w http.ResponseWriter, r *http.Request) {
 
 // signature creates a signature.
 // This should not be done on the api; but on the frontend wallet. Due to time constraints, it will happen here.
-func signature(sender string, receiver string, amount float64, priv *ecdsa.PrivateKey) ([]byte, error) {
-
+func signature(priv *ecdsa.PrivateKey) ([]byte, error) {
 	return crypto.Sign(priv, []byte("test"))
-	//return crypto.Sign(priv, []byte(fmt.Sprintf("%s%s%f", sender, receiver, amount)))
 }

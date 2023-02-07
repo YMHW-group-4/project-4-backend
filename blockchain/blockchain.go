@@ -58,8 +58,14 @@ func (b *Blockchain) AddBlock(block Block, validator string) {
 	}
 
 	for _, t := range block.Transactions {
-		if err := b.UpdateAccountModel(t.Receiver, t.Amount); err != nil {
-			log.Debug().Err(err).Msg("failed to update account")
+		if t.Type == Stake {
+			if err := b.UpdateAccountModel(t.Sender, t.Amount); err != nil {
+				log.Debug().Err(err).Msg("failed to update account")
+			}
+		} else {
+			if err := b.UpdateAccountModel(t.Receiver, t.Amount); err != nil {
+				log.Debug().Err(err).Msg("failed to update account")
+			}
 		}
 	}
 

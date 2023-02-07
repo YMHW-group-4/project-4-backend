@@ -1,10 +1,11 @@
 package networking
 
 import (
-	"backend/util"
 	"context"
 	"fmt"
 	"sync"
+
+	"backend/util"
 
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"

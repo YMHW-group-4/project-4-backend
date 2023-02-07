@@ -1,11 +1,12 @@
 package blockchain
 
 import (
-	"backend/crypto"
-	"backend/util"
 	"crypto/sha256"
 	"errors"
 	"fmt"
+
+	"backend/crypto"
+	"backend/util"
 )
 
 // TxType is the type of the Transaction.
@@ -58,11 +59,6 @@ func (t Transaction) Verify() error {
 	if !crypto.Verify(key, []byte("test"), util.HexDecode(t.Signature)) {
 		return fmt.Errorf("%w: invalid signature", ErrInvalidTransaction)
 	}
-
-	//// check whether the signature is valid
-	//if !crypto.Verify(key, []byte(fmt.Sprintf("%s%s%f", t.Sender, t.Receiver, t.Amount)), util.HexDecode(t.Signature)) {
-	//	return fmt.Errorf("%w: invalid signature", ErrInvalidTransaction)
-	//}
 
 	return nil
 }

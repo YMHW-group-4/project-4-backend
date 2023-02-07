@@ -115,7 +115,6 @@ func (n *Node) AddTransaction(transaction blockchain.Transaction) error {
 		return fmt.Errorf("%w: insufficient funds", blockchain.ErrInvalidTransaction)
 	}
 
-	// FIXME
 	// validate signature
 	if err = transaction.Verify(); err != nil {
 		return err
@@ -139,8 +138,6 @@ func (n *Node) AddTransaction(transaction blockchain.Transaction) error {
 
 		return err
 	}
-
-	// TODO change stake transaction
 
 	log.Debug().Msg("node: added transaction")
 
@@ -175,7 +172,6 @@ func (n *Node) CreateTransaction(sender string, receiver string, signature []byt
 		Type:      txType,
 	}
 
-	// FIXME (use priv key in api as temp fix)
 	// validate signature
 	if err = t.Verify(); err != nil {
 		log.Debug().Err(err).Msg("node: could not verify transaction")
@@ -345,7 +341,7 @@ func (n *Node) schedule(interval time.Duration) error {
 	go func() {
 		defer n.wg.Done()
 
-		ticker := time.NewTicker(30 * time.Second) // FIXME do this to interval
+		ticker := time.NewTicker(interval)
 
 		for {
 			select {
@@ -409,7 +405,7 @@ func (n *Node) forge() {
 				}
 			}
 
-			var value = 100
+			value := 100
 
 			if responses != 0 {
 				value = valid / responses * 100
@@ -436,6 +432,7 @@ func (n *Node) forge() {
 			v, _ := n.pos.GetStake(n.network.ID())
 			n.pos.Clear()
 			n.pos.Set(n.network.ID(), v.Float64())
+			log.Debug().Msgf("%s", v)
 
 			// reset responses
 			n.pos.Responses = make([]consensus.Resp, 0)
@@ -482,6 +479,21 @@ func (n *Node) listen() {
 					delete(n.pos.Validators, msg.Peer)
 
 					n.blockchain.AddBlock(b, msg.Peer)
+
+					for _, t := range b.Transactions {
+						if _, ok := n.pos.Transactions[t.String()]; ok {
+							if err := n.pos.Update(n.network.ID(), -t.Amount); err != nil {
+								log.Debug().Err(err).Msg("node: failed to update stake")
+							}
+
+							delete(n.pos.Transactions, t.String())
+						}
+					}
+
+					v, _ := n.pos.GetStake(n.network.ID())
+					n.pos.Clear()
+					n.pos.Set(n.network.ID(), v.Float64())
+					log.Debug().Msgf("%s", v)
 				}
 			case msg := <-net.Subs[networking.Blockchain].Messages: // blockchain
 				if len(n.blockchain.Blocks) > 0 {
